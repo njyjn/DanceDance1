@@ -4,7 +4,7 @@
 | ------------- | ------------- |
 | AI Aficionado  | Melvin  |
 | AI Aficionado  | Srishti  |
-| Dr. Power | Zhi Wei |
+| Power Pro | Zhi Wei |
 | Sensor Superman | Jia Hao |
 | Comms Champion | Zuo Xuan |
 | Comms Champion | Justin |
