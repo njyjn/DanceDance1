@@ -1,17 +1,12 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
+#include <semphr.h>
 
 const int NUM_SENSORS = 1;
 const int MAX_MESSAGE_BYTE_SIZE = 42;
 
 QueueHandle_t queue;
-
-struct TJZONPacket {
-  byte head;
-  byte packetCode;
-  TSensorData sensorData[NUM_SENSORS];
-  byte tail;
-};
+SemaphoreHandle_t barrierSemaphore;
 
 struct TSensorData {
   byte sensorId;
@@ -21,6 +16,13 @@ struct TSensorData {
   int gX;
   int gY;
   int gZ;
+};
+
+struct TJZONPacket {
+  byte head;
+  byte packetCode;
+  TSensorData sensorData[NUM_SENSORS];
+  byte tail;
 };
 
 void setup() {
@@ -35,6 +37,11 @@ void setup() {
   queue = xQueueCreate( NUM_SENSORS, sizeof( TSensorData ) );
   if(queue == NULL){
     Serial.println("Error creating the queue");
+  }
+
+  barrierSemaphore = xSemaphoreCreateCounting( NUM_SENSORS, 0 );
+  if(barrierSemaphore == NULL){
+    Serial.println("Error creating the semaphore");
   }
 
   // Now set up two tasks to run independently.
@@ -63,21 +70,26 @@ void Send2Rpi(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
 
-  for (;;) // A Task shall never return or exit.
-  {
-    TJZONPacket msg;
-    byte buffer[42];
-    msg.head = 55;
-    msg.packetCode = 5; // CODE: Data response
-    msg.tail = 57;
-
-    for (int i=0;i<NUM_SENSORS;i++) {
-      TSensorData sensorData;
-      xQueueReceive(queue, &sensorData, portMAX_DELAY);
-      msg.sensorData[i] = sensorData;
+  for (;;) {
+    // Run only if all sensors are ready with data
+    if (uxSemaphoreGetCount(barrierSemaphore) == 0) {
+      TJZONPacket msg;
+      byte buffer[42];
+      msg.head = 55;
+      msg.packetCode = 5; // CODE: Data response
+      msg.tail = 57;
+      for (int i=0;i<NUM_SENSORS;i++) {
+        TSensorData sensorData;
+        xQueueReceive(queue, &sensorData, portMAX_DELAY);
+        msg.sensorData[i] = sensorData;
+      }
+      unsigned len = serialize(buffer, &msg, sizeof(msg));
+      sendSerialData(buffer, len);
+      // Release the semaphores
+      for (int i=0;i<NUM_SENSORS;i++) {
+        xSemaphoreGive(barrierSemaphore);
+      }
     }
-    unsigned len = serialize(buffer, &msg, sizeof(msg));
-    sendSerialData(buffer, len);
   }
 }
 
@@ -87,7 +99,7 @@ void SensorRead(void *pvParameters)  // This is a task.
 
   for (;;)
   {
-    // read the inputs
+    // Read the inputs
     // TODO: @jiahao sensor sampling code
     // e.g. int sensorValue = analogRead(A0);
 
@@ -100,6 +112,8 @@ void SensorRead(void *pvParameters)  // This is a task.
     sensorData.gX = 0;
     sensorData.gY = 0;
     sensorData.gZ = 0;
+    // Reserve the semaphore
+    xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // Add to inter-task communication queue
     xQueueSend(queue, &sensorData, portMAX_DELAY);
     vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
