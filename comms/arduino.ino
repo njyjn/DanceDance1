@@ -3,10 +3,20 @@
 #include <semphr.h>
 
 /*
+ * Program Variables
+ */
+const int NUM_SENSORS = 3;
+const int DELAY_INIT_HANDSHAKE = 100;
+const int DELAY_SENSOR_READ = 100;
+const int DELAY_SEND2RPI = 10;
+
+/*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
  */
 const int MESSAGE_START = 55;
 const int MESSAGE_SIZE_NO_DATA = 3;
+const int MESSAGE_SIZE_DATA = NUM_SENSORS * 12 + NUM_SENSORS;
+const int MESSAGE_SIZE_FULL = MESSAGE_SIZE_NO_DATA + MESSAGE_SIZE_DATA + 1;
 const int MESSAGE_PACKET_CODE_INDEX_NO_DATA = 1;
 const int PACKET_CODE_NACK = 0;
 const int PACKET_CODE_ACK = 1;
@@ -14,14 +24,6 @@ const int PACKET_CODE_HELLO = 2;
 const int PACKET_CODE_READ = 3;
 const int PACKET_CODE_WRITE = 4;
 const int PACKET_CODE_DATA_RESPONSE = 5;
-
-/*
- * Program Variables
- */
-const int NUM_SENSORS = 3;
-const int DELAY_INIT_HANDSHAKE = 100;
-const int DELAY_SENSOR_READ = 100;
-const int DELAY_SEND2RPI = 1;
 
 QueueHandle_t queue;
 SemaphoreHandle_t barrierSemaphore;
