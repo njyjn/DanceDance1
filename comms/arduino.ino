@@ -36,7 +36,7 @@ void setup() {
     Serial.write("Error creating the queue!\n");
   }
 
-  barrierSemaphore = xSemaphoreCreateCounting( NUM_SENSORS, 0 );
+  barrierSemaphore = xSemaphoreCreateCounting( NUM_SENSORS, NUM_SENSORS );
   if(barrierSemaphore == NULL){
     Serial.write("Error creating the semaphore!\n");
   }
