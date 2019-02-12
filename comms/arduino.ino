@@ -2,7 +2,26 @@
 #include <queue.h>
 #include <semphr.h>
 
+/*
+ *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
+ */
+const int MESSAGE_START = 55;
+const int MESSAGE_SIZE_NO_DATA = 3;
+const int MESSAGE_PACKET_CODE_INDEX_NO_DATA = 1;
+const int PACKET_CODE_NACK = 0;
+const int PACKET_CODE_ACK = 1;
+const int PACKET_CODE_HELLO = 2;
+const int PACKET_CODE_READ = 3;
+const int PACKET_CODE_WRITE = 4;
+const int PACKET_CODE_DATA_RESPONSE = 5;
+
+/*
+ * Program Variables
+ */
 const int NUM_SENSORS = 3;
+const int DELAY_INIT_HANDSHAKE = 100;
+const int DELAY_SENSOR_READ = 100;
+const int DELAY_SEND2RPI = 1;
 
 QueueHandle_t queue;
 SemaphoreHandle_t barrierSemaphore;
@@ -95,8 +114,8 @@ void Send2Rpi(void *pvParameters)  // This is a task.
       //Serial.write("Preparing to write to RPi...\n");
       // Create data packet
       struct TJZONPacket msg;
-      msg.start = 55;
-      msg.packetCode = 5; // CODE: Data response
+      msg.start = MESSAGE_START;
+      msg.packetCode = PACKET_CODE_DATA_RESPONSE;
       msg.len = NUM_SENSORS;
       for (int i=0;i<NUM_SENSORS;i++) {
         xQueueReceive(queue, &sensorData, portMAX_DELAY);
@@ -110,7 +129,7 @@ void Send2Rpi(void *pvParameters)  // This is a task.
         xSemaphoreGive(barrierSemaphore);
       }
     }
-    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(DELAY_SEND2RPI);  // one tick delay (15ms) in between reads for stability
   }
 }
 
