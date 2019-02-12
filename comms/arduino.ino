@@ -44,11 +44,13 @@ struct TJZONPacket {
 };
 
 void setup() {
-  // initialize both serial ports
   // Serial: Debugging console
   Serial.begin(9600);
   // Serial1: TX/RX to RPi
   Serial1.begin(9600);
+
+  Serial.println("Initiating handshake with RPi...");
+  initialHandshake();
 
   queue = xQueueCreate( NUM_SENSORS, sizeof( struct TSensorData ) );
   if(queue == NULL){
@@ -97,8 +99,6 @@ void setup() {
     NULL
   );
 
-  // TODO: Initial handshaking protocol
-  // Arduino is ready at this point, and initiates a handshake
   Serial.println("Setup complete!");
 }
 
@@ -156,8 +156,59 @@ void SensorRead(void *pvParameters)  // This is a task.
     sensorData.gZ = (short)6*sensorId;
     // Add to inter-task communication queue
     xQueueSend(queue, &sensorData, portMAX_DELAY);
-    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(DELAY_SENSOR_READ);  // one tick delay (15ms) in between reads for stability
   }
+}
+
+void initialHandshake() {
+  int handshake_status = 0;
+  struct TJZONPacket msg;
+  for (;;) {
+    char bufferSend[sizeof(msg)];
+    char bufferReceive[sizeof(msg)];
+    // Send HELLO to RPi
+    msg = generateHandshakeMessage(PACKET_CODE_HELLO);
+    memcpy(bufferSend, &msg, sizeof(msg));
+    sendSerialData(bufferSend, sizeof(bufferSend));
+    Serial.println("Sent HELLO to RPi");
+    // Get ACK from RPi
+    Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+    if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
+      Serial.println("Got HELLO ACK from RPi");
+      // Send ACK to RPi
+      msg = generateHandshakeMessage(PACKET_CODE_ACK);
+      memcpy(bufferSend, &msg, sizeof(msg));
+      sendSerialData(bufferSend, sizeof(bufferSend));
+      Serial.println("Sent first ACK to RPi");
+      // Get HELLO from RPi
+      Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+      if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_HELLO) {
+        Serial.println("Got HELLO from RPi");
+        // Send Ack to RPi
+        msg = generateHandshakeMessage(PACKET_CODE_ACK);
+        memcpy(bufferSend, &msg, sizeof(msg));
+        sendSerialData(bufferSend, sizeof(bufferSend));
+        Serial.println("Sent HELLO ACK to RPi");
+        // Get Ack from RPi
+        Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+        if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
+          // Success!
+          Serial.println("Got last ACK from RPi");
+          return;
+        }
+      }
+    }
+    Serial.println("Handshake failed. Retrying...");
+    delay(DELAY_INIT_HANDSHAKE);
+  }
+}
+
+struct TJZONPacket generateHandshakeMessage(int packetCode) {
+    struct TJZONPacket msg;
+    msg.start = MESSAGE_START;
+    msg.packetCode = packetCode;
+    msg.len = 0;
+    return msg;
 }
 
 void sendSerialData(char *buffer, int len) {
