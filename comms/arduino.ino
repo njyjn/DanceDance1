@@ -157,12 +157,12 @@ void SensorRead(void *pvParameters)  // This is a task.
     // Assemble sensor data packet
     // TODO: Replace with actual variables
     sensorData.sensorId = sensorId;
-    sensorData.aX = (short)1*sensorId;
-    sensorData.aY = (short)2*sensorId;
-    sensorData.aZ = (short)3*sensorId;
-    sensorData.gX = (short)4*sensorId;
-    sensorData.gY = (short)5*sensorId;
-    sensorData.gZ = (short)6*sensorId;
+    sensorData.aX = (short)random(-10*sensorId,10*sensorId);
+    sensorData.aY = (short)random(-20*sensorId,20*sensorId);
+    sensorData.aZ = (short)random(-30*sensorId,30*sensorId);
+    sensorData.gX = (short)random(-40*sensorId,40*sensorId);
+    sensorData.gY = (short)random(-50*sensorId,50*sensorId);
+    sensorData.gZ = (short)random(-60*sensorId,60*sensorId);
     // Add to inter-task communication queue
     xQueueSend(queue, &sensorData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);  // one tick delay (15ms) in between reads for stability
@@ -221,12 +221,7 @@ struct TJZONPacket generateHandshakeMessage(int packetCode) {
 }
 
 void sendSerialData(char *buffer, int len) {
-//  for(int i=0; i<len; i++) {
-//    Serial1.write(buffer[i]);
-//  }
   Serial1.write(buffer, len);
-  Serial1.flush();
-  Serial.println("Data sent!");
 }
 
 void loop() {
