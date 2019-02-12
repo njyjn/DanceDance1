@@ -8,20 +8,20 @@ QueueHandle_t queue;
 SemaphoreHandle_t barrierSemaphore;
 
 struct TSensorData {
-  byte sensorId;
-  int aX;
-  int aY;
-  int aZ;
-  int gX;
-  int gY;
-  int gZ;
+  char sensorId;
+  short aX;
+  short aY;
+  short aZ;
+  short gX;
+  short gY;
+  short gZ;
 };
 
 struct TJZONPacket {
-  byte head;
-  byte packetCode;
-  TSensorData sensorData[NUM_SENSORS];
-  byte tail;
+  char start;
+  char packetCode;
+  char len;
+  struct TSensorData sensorData[NUM_SENSORS];
 };
 
 void setup() {
@@ -33,7 +33,7 @@ void setup() {
   Serial1.begin(9600);
   Serial1.flush();
 
-  queue = xQueueCreate( NUM_SENSORS, sizeof( TSensorData ) );
+  queue = xQueueCreate( NUM_SENSORS, sizeof( struct TSensorData ) );
   if(queue == NULL){
     Serial.println("Error creating the queue");
   }
