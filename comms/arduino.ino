@@ -86,51 +86,55 @@ void setup() {
 void Send2Rpi(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
+  struct TSensorData sensorData;
 
   for (;;) {
     // Run only if all sensors are ready with data
     if (uxSemaphoreGetCount(barrierSemaphore) == 0) {
-      TJZONPacket msg;
-      byte buffer[42];
-      msg.head = 55;
+      // TODO: Perform write handshake
+      //Serial.write("Preparing to write to RPi...\n");
+      // Create data packet
+      struct TJZONPacket msg;
+      msg.start = 55;
       msg.packetCode = 5; // CODE: Data response
-      msg.tail = 57;
+      msg.len = NUM_SENSORS;
       for (int i=0;i<NUM_SENSORS;i++) {
-        TSensorData sensorData;
         xQueueReceive(queue, &sensorData, portMAX_DELAY);
         msg.sensorData[i] = sensorData;
       }
-      unsigned len = serialize(buffer, &msg, sizeof(msg));
-      sendSerialData(buffer, len);
+      char buffer[sizeof(msg)];
+      memcpy(buffer, &msg, sizeof(msg));
+      sendSerialData(buffer, sizeof(buffer));
       // Release the semaphores
       for (int i=0;i<NUM_SENSORS;i++) {
         xSemaphoreGive(barrierSemaphore);
       }
     }
+    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
   }
 }
 
 void SensorRead(void *pvParameters)  // This is a task.
 {
-  (void) pvParameters;
-
+  struct TSensorData sensorData;
+  int sensorId = (uint32_t) pvParameters;
   for (;;)
   {
+    // Reserve the semaphore
+    xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // Read the inputs
     // TODO: @jiahao sensor sampling code
     // e.g. int sensorValue = analogRead(A0);
 
     // Assemble sensor data packet
     // TODO: Replace with actual variables
-    TSensorData sensorData;
-    sensorData.aX = 0;
-    sensorData.aY = 0;
-    sensorData.aZ = 0;
-    sensorData.gX = 0;
-    sensorData.gY = 0;
-    sensorData.gZ = 0;
-    // Reserve the semaphore
-    xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
+    sensorData.sensorId = sensorId;
+    sensorData.aX = (short)1*sensorId;
+    sensorData.aY = (short)2*sensorId;
+    sensorData.aZ = (short)3*sensorId;
+    sensorData.gX = (short)4*sensorId;
+    sensorData.gY = (short)5*sensorId;
+    sensorData.gZ = (short)6*sensorId;
     // Add to inter-task communication queue
     xQueueSend(queue, &sensorData, portMAX_DELAY);
     vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
@@ -147,12 +151,5 @@ void sendSerialData(char *buffer, int len) {
 }
 
 void loop() {
-  // if (Serial1.available()) {
-  //   int inByte = Serial1.read();
-  //   Serial.write(inByte);
-  // }
-  // if (Serial.available()) {
-  //   int inByte = Serial.read();
-  //   Serial1.write(inByte);
-  // }
+  delay(1000);
 }
