@@ -123,7 +123,16 @@ void Send2Rpi(void *pvParameters)  // This is a task.
       }
       char buffer[sizeof(msg)];
       memcpy(buffer, &msg, sizeof(msg));
-      sendSerialData(buffer, sizeof(buffer));
+      int acknowledged = 0;
+      while (acknowledged == 0) {
+        sendSerialData(buffer, sizeof(buffer));
+        Serial.print("Data sent... ");
+        Serial1.readBytes(buffer, MESSAGE_SIZE_NO_DATA);
+        if (buffer[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
+          Serial.println("Acknowledged!");
+          acknowledged = 1;
+        }
+      }
       // Release the semaphores
       for (int i=0;i<NUM_SENSORS;i++) {
         xSemaphoreGive(barrierSemaphore);
