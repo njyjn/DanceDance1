@@ -47,7 +47,7 @@ void setup() {
     "Send2Rpi",
     256, // Stack size
     NULL,
-    4, // priority
+    2, // priority
     NULL
   );
 
@@ -56,7 +56,7 @@ void setup() {
     "SensorRead1",
     256, // stack size
     (void *) 1,
-    3, // priority
+    1, // priority
     NULL
   );
 
