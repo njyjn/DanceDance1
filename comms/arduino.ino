@@ -28,19 +28,17 @@ void setup() {
   // initialize both serial ports
   // Serial: Debugging console
   Serial.begin(9600);
-  Serial.flush();
   // Serial1: TX/RX to RPi
   Serial1.begin(9600);
-  Serial1.flush();
 
   queue = xQueueCreate( NUM_SENSORS, sizeof( struct TSensorData ) );
   if(queue == NULL){
-    Serial.println("Error creating the queue");
+    Serial.write("Error creating the queue!\n");
   }
 
   barrierSemaphore = xSemaphoreCreateCounting( NUM_SENSORS, 0 );
   if(barrierSemaphore == NULL){
-    Serial.println("Error creating the semaphore");
+    Serial.write("Error creating the semaphore!\n");
   }
 
   // Now set up four tasks to run independently.
@@ -82,6 +80,7 @@ void setup() {
 
   // TODO: Initial handshaking protocol
   // Arduino is ready at this point, and initiates a handshake
+  Serial.println("Setup complete!");
 }
 
 void Send2Rpi(void *pvParameters)  // This is a task.
@@ -138,20 +137,13 @@ void SensorRead(void *pvParameters)  // This is a task.
   }
 }
 
-unsigned int serialize(byte *buf, void *p, size_t size) {
-  char checksum = 0;
-  buf[0]=size;
-  memcpy(buf+1, p, size);
-  for(int i=1; i<=size; i++) {
-    checksum ^= buf[i];
-  }
-  buf[size+1]=checksum;
-  return size+2;
-}
-
-void sendSerialData(byte *buffer, int len) {
-  for(int i=0; i<len; i++)
-    Serial1.write(buffer[i]);
+void sendSerialData(char *buffer, int len) {
+//  for(int i=0; i<len; i++) {
+//    Serial1.write(buffer[i]);
+//  }
+  Serial1.write(buffer, len);
+  Serial1.flush();
+  Serial.println("Data sent!");
 }
 
 void loop() {
