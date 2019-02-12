@@ -2,8 +2,7 @@
 #include <queue.h>
 #include <semphr.h>
 
-const int NUM_SENSORS = 1;
-const int MAX_MESSAGE_BYTE_SIZE = 42;
+const int NUM_SENSORS = 2;
 
 QueueHandle_t queue;
 SemaphoreHandle_t barrierSemaphore;
@@ -44,23 +43,42 @@ void setup() {
     Serial.println("Error creating the semaphore");
   }
 
-  // Now set up two tasks to run independently.
+  // Now set up four tasks to run independently.
   xTaskCreate(
-    Send2Rpi
-    ,  (const portCHAR *) "Send2Rpi"   // A name just for humans
-    ,  128  // Stack size
-    ,  NULL
-    ,  1  // priority
-    ,  NULL );
+    Send2Rpi,
+    "Send2Rpi",
+    256, // Stack size
+    NULL,
+    4, // priority
+    NULL
+  );
 
   xTaskCreate(
-    SensorRead
-    ,  (const portCHAR *) "SensorRead1"
-    ,  128 // This stack size can be checked & adjusted by reading Highwater
-    ,  NULL
-    ,  2  // priority
-    ,  NULL
+    SensorRead,
+    "SensorRead1",
+    256, // stack size
+    (void *) 1,
+    3, // priority
+    NULL
   );
+
+  xTaskCreate(
+    SensorRead,
+    "SensorRead2",
+    256, // stack size
+    (void *) 2,
+    2, // priority
+    NULL
+  );
+
+  // xTaskCreate(
+  //   SensorRead,
+  //   "SensorRead3",
+  //   256, // stack size
+  //   (void *) 3,
+  //   1, // priority
+  //   NULL
+  // );
 
   // TODO: Initial handshaking protocol
   // Arduino is ready at this point, and initiates a handshake
