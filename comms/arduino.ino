@@ -2,7 +2,7 @@
 #include <queue.h>
 #include <semphr.h>
 
-const int NUM_SENSORS = 2;
+const int NUM_SENSORS = 3;
 
 QueueHandle_t queue;
 SemaphoreHandle_t barrierSemaphore;
@@ -65,18 +65,18 @@ void setup() {
     "SensorRead2",
     256, // stack size
     (void *) 2,
-    2, // priority
+    1, // priority
     NULL
   );
 
-  // xTaskCreate(
-  //   SensorRead,
-  //   "SensorRead3",
-  //   256, // stack size
-  //   (void *) 3,
-  //   1, // priority
-  //   NULL
-  // );
+  xTaskCreate(
+    SensorRead,
+    "SensorRead3",
+    256, // stack size
+    (void *) 3,
+    1, // priority
+    NULL
+  );
 
   // TODO: Initial handshaking protocol
   // Arduino is ready at this point, and initiates a handshake
