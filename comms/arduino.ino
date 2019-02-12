@@ -110,10 +110,13 @@ void Send2Rpi(void *pvParameters)
   struct TSensorData sensorData;
 
   for (;;) {
+    struct TJZONPacket msg;
+    char bufferPacket[MESSAGE_SIZE_FULL];
+    char bufferAck[MESSAGE_SIZE_NO_DATA];
+    int acknowledged = 0;
     // Run only if all sensors are ready with data
     if (uxSemaphoreGetCount(barrierSemaphore) == 0) {
       // Create data packet
-      struct TJZONPacket msg;
       msg.start = MESSAGE_START;
       msg.packetCode = PACKET_CODE_DATA_RESPONSE;
       msg.len = NUM_SENSORS;
@@ -121,16 +124,18 @@ void Send2Rpi(void *pvParameters)
         xQueueReceive(queue, &sensorData, portMAX_DELAY);
         msg.sensorData[i] = sensorData;
       }
-      char buffer[sizeof(msg)];
-      memcpy(buffer, &msg, sizeof(msg));
-      int acknowledged = 0;
+      serialize(bufferPacket, &msg, sizeof(msg));
       while (acknowledged == 0) {
-        sendSerialData(buffer, sizeof(buffer));
+        sendSerialData(bufferPacket, sizeof(bufferPacket));
         Serial.print("Data sent... ");
-        Serial1.readBytes(buffer, MESSAGE_SIZE_NO_DATA);
-        if (buffer[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
-          Serial.println("Acknowledged!");
-          acknowledged = 1;
+        if (Serial1.available()) {
+          Serial1.readBytes(bufferAck, MESSAGE_SIZE_NO_DATA);
+          if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
+            Serial.println("Acknowledged!");
+            acknowledged = 1;
+          }
+        } else {
+          continue;
         }
       }
       // Release the semaphores
@@ -218,6 +223,15 @@ struct TJZONPacket generateHandshakeMessage(int packetCode) {
     msg.packetCode = packetCode;
     msg.len = 0;
     return msg;
+}
+
+void serialize(char *buf, void *p, size_t size) {
+  char checksum = 0;
+  memcpy(buf, p, size);
+  for(int i=MESSAGE_SIZE_NO_DATA; i<size; i++) {
+    checksum ^= buf[i];
+  }
+  buf[size] = checksum;
 }
 
 void sendSerialData(char *buffer, int len) {
