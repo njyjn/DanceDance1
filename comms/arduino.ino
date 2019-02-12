@@ -104,7 +104,7 @@ void setup() {
   Serial.println("Setup complete!");
 }
 
-void Send2Rpi(void *pvParameters)  // This is a task.
+void Send2Rpi(void *pvParameters)
 {
   (void) pvParameters;
   struct TSensorData sensorData;
@@ -112,8 +112,6 @@ void Send2Rpi(void *pvParameters)  // This is a task.
   for (;;) {
     // Run only if all sensors are ready with data
     if (uxSemaphoreGetCount(barrierSemaphore) == 0) {
-      // TODO: Perform write handshake
-      //Serial.write("Preparing to write to RPi...\n");
       // Create data packet
       struct TJZONPacket msg;
       msg.start = MESSAGE_START;
@@ -140,11 +138,11 @@ void Send2Rpi(void *pvParameters)  // This is a task.
         xSemaphoreGive(barrierSemaphore);
       }
     }
-    vTaskDelay(DELAY_SEND2RPI);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(DELAY_SEND2RPI);
   }
 }
 
-void SensorRead(void *pvParameters)  // This is a task.
+void SensorRead(void *pvParameters)
 {
   struct TSensorData sensorData;
   int sensorId = (uint32_t) pvParameters;
@@ -167,7 +165,7 @@ void SensorRead(void *pvParameters)  // This is a task.
     sensorData.gZ = (short)random(-60*sensorId,60*sensorId);
     // Add to inter-task communication queue
     xQueueSend(queue, &sensorData, portMAX_DELAY);
-    vTaskDelay(DELAY_SENSOR_READ);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(DELAY_SENSOR_READ);
   }
 }
 
