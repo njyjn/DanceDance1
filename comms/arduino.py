@@ -12,7 +12,7 @@ PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
 
-global port
+port = None
 
 def process_data(port,len):
     packet = {}
