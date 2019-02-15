@@ -112,7 +112,7 @@ def init():
     handshake_init(port)
 
 
-def main():
+def run():
     # Process the packets
     while True:
         packet, is_valid = read_packet(port)
