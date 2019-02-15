@@ -12,6 +12,8 @@ PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
 
+global port
+
 def process_data(port,len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
@@ -99,18 +101,18 @@ def handshake_init(port):
         except Exception as e:
             print(str(e))
     return True
-    
-                
-def main():            
-    port = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
-    port.flushInput()
 
+
+def init():
     # Initial setup message to console
     print("Hello world! Awaiting initial handshake from Arduino...")
-
+    port = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
+    port.flushInput()
     # Initial handshake with RPi
     handshake_init(port)
 
+
+def main():
     # Process the packets
     while True:
         packet, is_valid = read_packet(port)
@@ -123,5 +125,3 @@ def main():
             # TODO: @melvin / @shrishti - Store and process this packet somewhere
         elif packet.get('packet_code') == 2:
             handshake_init(port)
-            
-main()
