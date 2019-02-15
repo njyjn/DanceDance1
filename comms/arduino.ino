@@ -47,9 +47,9 @@ struct TJZONPacket {
 
 void setup() {
   // Serial: Debugging console
-  Serial.begin(9600);
+  Serial.begin(115200);
   // Serial1: TX/RX to RPi
-  Serial1.begin(9600);
+  Serial1.begin(115200);
 
   Serial.println("Initiating handshake with RPi...");
   initialHandshake();

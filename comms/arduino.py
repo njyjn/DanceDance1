@@ -106,7 +106,7 @@ def handshake_init(port):
 def init():
     # Initial setup message to console
     print("Hello world! Awaiting initial handshake from Arduino...")
-    port = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
+    port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
     port.flushInput()
     # Initial handshake with RPi
     handshake_init(port)
