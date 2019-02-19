@@ -18,7 +18,8 @@ def Main_Run():
     my_pi = RaspberryPi(ip_addr, port_num)
 
     #poll data from arduino and send it to ML.
-    my_Ard.run()
+    for x in range(0,5):
+        packet = my_Ard.listen()
     my_ML = ML()
     #obtain dance move and other relevant information from ML and send it to server
     data = Data(my_pi.sock, my_ML)
