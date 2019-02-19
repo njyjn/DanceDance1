@@ -14,6 +14,7 @@ PACKET_CODE_DATA_RESPONSE = 5
 
 port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
+
 def process_data(len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
@@ -32,6 +33,7 @@ def process_data(len):
         packet[str(sensor_id)] = data
     checksum = int(port.read().hex(),16)
     return packet, (checksum == rawsum)
+
 
 def read_packet():
     packet = {}
@@ -106,22 +108,20 @@ def handshake_init():
 def init():
     # Initial setup message to console
     print("Hello world! Awaiting initial handshake from Arduino...")
-    port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
     port.flushInput()
     # Initial handshake with RPi
-    handshake_init(port)
+    handshake_init()
 
 
-def run():
+def listen():
     # Process the packets
-    while True:
-        packet, is_valid = read_packet(port)
-        if packet.get('packet_code') == 5:
-            if is_valid:
-                send_packet(port,PACKET_CODE_ACK) # Acknowledge data received
-            else:
-                send_packet(port,PACKET_CODE_NACK) # Reject data and ask to resend
-            print(packet)
-            # TODO: @melvin / @shrishti - Store and process this packet somewhere
-        elif packet.get('packet_code') == 2:
-            handshake_init(port)
+    packet, is_valid = read_packet()
+    if packet.get('packet_code') == 2:
+        handshake_init()
+    if packet.get('packet_code') == 5:
+        if is_valid:
+            send_packet(PACKET_CODE_ACK) # Acknowledge data received
+        else:
+            send_packet(PACKET_CODE_NACK) # Reject data and ask to resend
+        print(packet)
+        return packet
