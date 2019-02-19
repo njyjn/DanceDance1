@@ -40,7 +40,7 @@ class Data():
         self.voltage = 20
         self.power = 20
         self.cumpower = 20
-        dataToSend = ("#" + self.move + "|" + self.voltage + "|" + self.current + "|" + self.power + "|" + self.cumpower)
+        dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower))
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData = self.encrypt(paddedMsg)
         self.sock.send(encryptedData)
