@@ -9,21 +9,39 @@ from Crypto.Cipher import AES
 import base64
 
 import arduino as my_Ard
+
+import threading
+
 def Main_Run():
 
     #init conn to Arduino, blocking
-    my_Ard.init()
+    #my_Ard.init()
 
     #init server
-    my_pi = RaspberryPi(ip_addr, port_num)
+    #my_pi = RaspberryPi(ip_addr, port_num)
 
     #poll data from arduino and send it to ML.
-    for x in range(0,5):
-        packet = my_Ard.listen()
+    #for x in range(0,5):
+    #while True:
+    myThread = listen()
+    myThread.start()
+        #print(packet)
     my_ML = ML()
     #obtain dance move and other relevant information from ML and send it to server
-    data = Data(my_pi.sock, my_ML)
-    data.sendData()
+    #data = Data(my_pi.sock, my_ML)
+    #data.sendData()
+
+
+class listen(threading.Thread):
+    
+    def __init__(self):
+        threading.Thread.__init__(self)
+        
+    def run(self):
+        my_Ard.init()
+        while True:
+            packet = my_Ard.listen()
+            print(packet)
 
 class ML():
     #dummy class for ML module
@@ -89,8 +107,6 @@ class RaspberryPi():
         return paddedMsg
 
 if __name__ == '__main__':
-
-    print("input server address: ")
 
     ip_addr = sys.argv[1]
 

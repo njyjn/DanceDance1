@@ -116,12 +116,11 @@ def init():
 def listen():
     # Process the packets
     packet, is_valid = read_packet()
-    if packet.get('packet_code') == 2:
-        handshake_init()
     if packet.get('packet_code') == 5:
         if is_valid:
             send_packet(PACKET_CODE_ACK) # Acknowledge data received
         else:
             send_packet(PACKET_CODE_NACK) # Reject data and ask to resend
-        print(packet)
         return packet
+    elif packet.get('packet_code') == 2:
+        handshake_init()
