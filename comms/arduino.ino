@@ -9,6 +9,7 @@ const int NUM_SENSORS = 3;
 const int DELAY_INIT_HANDSHAKE = 100;
 const int DELAY_SENSOR_READ = 100;
 const int DELAY_SEND2RPI = 10;
+const int RESEND_THRESHOLD = 10;
 
 /*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
@@ -114,6 +115,7 @@ void Send2Rpi(void *pvParameters)
     char bufferPacket[MESSAGE_SIZE_FULL];
     char bufferAck[MESSAGE_SIZE_NO_DATA];
     int acknowledged = 0;
+    int resend_count = 0;
     // Run only if all sensors are ready with data
     if (uxSemaphoreGetCount(barrierSemaphore) == 0) {
       // Create data packet
@@ -125,7 +127,7 @@ void Send2Rpi(void *pvParameters)
         msg.sensorData[i] = sensorData;
       }
       serialize(bufferPacket, &msg, sizeof(msg));
-      while (acknowledged == 0) {
+      while (acknowledged == 0 && resend_count <= RESEND_THRESHOLD) {
         sendSerialData(bufferPacket, sizeof(bufferPacket));
         Serial.print("Data sent... ");
         if (Serial1.available()) {
@@ -133,10 +135,11 @@ void Send2Rpi(void *pvParameters)
           if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
             Serial.println("Acknowledged!");
             acknowledged = 1;
+          } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_NACK) {
+            Serial.println("Resend!");
           }
-        } else {
-          continue;
         }
+        resend_count++;
       }
       // Release the semaphores
       for (int i=0;i<NUM_SENSORS;i++) {
