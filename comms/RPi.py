@@ -8,18 +8,49 @@ from Crypto.Cipher import AES
 
 import base64
 
+import arduino as my_Ard
+def Main_Run():
+
+    #init conn to Arduino, blocking
+    my_Ard.init()
+
+    #init server
+    my_pi = RaspberryPi(ip_addr, port_num)
+
+    #poll data from arduino and send it to ML.
+    my_Ard.run()
+    my_ML = ML()
+    #obtain dance move and other relevant information from ML and send it to server
+    data = Data(my_pi.sock, my_ML)
+    data.sendData()
+
+class ML():
+    #dummy class for ML module
+    def get(self):
+        return "cowboy"
+
+
 class Data():
-    def __init__(self, socket):
-        self.sock = socket        
-    def sendData(self, move):
-        self.move = move
+    def __init__(self, socket, ML):
+        self.sock = socket    
+        self.ML = ML    
+    def sendData(self):
+        self.move = self.ML.get() #ML module that determines the dance move.
         self.current = 20
         self.voltage = 20
         self.power = 20
         self.cumpower = 20
         dataToSend = ("#" + self.move + "|" + self.voltage + "|" + self.current + "|" + self.power + "|" + self.cumpower)
-        encryptedData = self.encrypt(dataToSend)
+        paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
+        encryptedData = self.encrypt(paddedMsg)
         self.sock.send(encryptedData)
+
+    def pad(self,msg):
+        extraChar = len(msg) % 16
+        if extraChar > 0: #if msg size is under or over 16 char size
+            padsize = 16 - extraChar
+            paddedMsg = msg + (' ' * padsize)
+        return paddedMsg
 
     def encrypt(self, msg):
         secret_key = "1234512345123451"
@@ -39,7 +70,7 @@ class RaspberryPi():
         server_fullAdd = (self.server_add, self.server_port)
         self.sock.connect(server_fullAdd) #connect to server socket
         print("connected to server websocket!")
-        self.send()
+        #self.send()
     
     def send(self): #dummy msg for testing
         msg = "#fsdfoy|20|20|20|20|"
@@ -55,6 +86,7 @@ class RaspberryPi():
             padsize = 16 - extraChar
             paddedMsg = msg + (' ' * padsize)
         return paddedMsg
+
 if __name__ == '__main__':
 
     print("input server address: ")
@@ -63,4 +95,5 @@ if __name__ == '__main__':
 
     port_num = sys.argv[2]
 
-    my_pi = RaspberryPi(ip_addr, port_num)
+    Main_Run()
+    #my_pi = RaspberryPi(ip_addr, port_num)
