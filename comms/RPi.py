@@ -1,3 +1,5 @@
+import Queue
+
 import socket
 
 import sys
@@ -12,25 +14,35 @@ import arduino as my_Ard
 
 import threading
 
+#global variables
+dataQueue = Queue.Queue(10)
+queueLock = threading.Lock()
+
 def Main_Run():
 
-    #init conn to Arduino, blocking
-    #my_Ard.init()
+    myThread1 = listen()
+    myThread1.start()
+    
+    myThread2 = toMLtoServer()
+    myThread2.start()
 
-    #init server
-    #my_pi = RaspberryPi(ip_addr, port_num)
+class toMLtoServer(threading.Thread):
 
-    #poll data from arduino and send it to ML.
-    #for x in range(0,5):
-    #while True:
-    myThread = listen()
-    myThread.start()
-        #print(packet)
-    my_ML = ML()
-    #obtain dance move and other relevant information from ML and send it to server
-    #data = Data(my_pi.sock, my_ML)
-    #data.sendData()
+    def __init__(self): 
+        threading.Thread.__init__(self)
 
+    def run(self):
+        #my_pi = RaspberryPi(ip_addr, port_num)
+        #my_ML = ML()
+        while True:
+            queueLock.acquire()
+            if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
+                ML_data = dataQueue.get()
+                print("data got is " + str(ML_data)) #check for multithreading using this line
+                #danceMove = my_ML.give(ML_data)
+            queueLock.release()
+            #data = Data(danceMove, my_pi.sock)
+            #data.sendData()
 
 class listen(threading.Thread):
     
@@ -40,21 +52,25 @@ class listen(threading.Thread):
     def run(self):
         my_Ard.init()
         while True:
-            packet = my_Ard.listen()
-            print(packet)
+            packet = my_Ard.listen() #packet is in dict format
+            queueLock.acquire()
+            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+                dataQueue.put(packet)
+            queueLock.release()
 
 class ML():
     #dummy class for ML module
-    def get(self):
+    def give(self, data):
         return "cowboy"
 
 
 class Data():
-    def __init__(self, socket, ML):
-        self.sock = socket    
-        self.ML = ML    
+    def __init__(self, move, sock):
+        self.move = move
+        self.sock = sock    
+        #self.ML = ML    
     def sendData(self):
-        self.move = self.ML.get() #ML module that determines the dance move.
+        #self.move = self.ML.get() #ML module that determines the dance move.
         self.current = 20
         self.voltage = 20
         self.power = 20
@@ -72,7 +88,7 @@ class Data():
         return paddedMsg
 
     def encrypt(self, msg):
-        secret_key = "1234512345123451"
+        secret_key = "1234512345123451" #dummy key for testing
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(secret_key,AES.MODE_CBC,iv)
         return base64.b64encode(iv + cipher.encrypt(msg))
@@ -89,22 +105,6 @@ class RaspberryPi():
         server_fullAdd = (self.server_add, self.server_port)
         self.sock.connect(server_fullAdd) #connect to server socket
         print("connected to server websocket!")
-        #self.send()
-    
-    def send(self): #dummy msg for testing
-        msg = "#fsdfoy|20|20|20|20|"
-        paddedMsg = self.pad(msg) #apply padding to pad message to multiple of 16
-        secret_key = "1234512345123451" #secret key for testing only
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(secret_key,AES.MODE_CBC,iv)
-        encodedMsg = base64.b64encode(iv + cipher.encrypt(paddedMsg))
-        self.sock.send(encodedMsg)
-    def pad(self,msg):
-        extraChar = len(msg) % 16
-        if extraChar > 0: #if msg size is under or over 16 char size
-            padsize = 16 - extraChar
-            paddedMsg = msg + (' ' * padsize)
-        return paddedMsg
 
 if __name__ == '__main__':
 
@@ -113,4 +113,3 @@ if __name__ == '__main__':
     port_num = sys.argv[2]
 
     Main_Run()
-    #my_pi = RaspberryPi(ip_addr, port_num)
