@@ -1,11 +1,22 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
+#include "Wire.h"  
+#include "MPU6050.h" 
+
+
+/*
+ * Hardware Pins 
+ */
+#define MPU_1 48
+#define MPU_2 50
+#define MPU_3 52
 
 /*
  * Program Variables
  */
 const int NUM_SENSORS = 3;
+const int MPU_ADDR = 0X68; // I2C address of the MPU-6050
 const int NUM_TASKS = 1;
 const int DELAY_INIT_HANDSHAKE = 100;
 const int DELAY_SENSOR_READ = 100;
@@ -48,11 +59,31 @@ struct TJZONPacket {
 };
 
 void setup() {
+  
+  pinMode(MPU_1, OUTPUT);
+  pinMode(MPU_2, OUTPUT);
+  pinMode(MPU_3, OUTPUT);
+  
   // Serial: Debugging console
   Serial.begin(115200);
   // Serial1: TX/RX to RPi
   Serial1.begin(115200);
 
+  digitalWrite(MPU_1, LOW);
+  digitalWrite(MPU_2, HIGH);
+  digitalWrite(MPU_3, HIGH);
+  writeToWire(); 
+  
+  digitalWrite(MPU_1, HIGH);
+  digitalWrite(MPU_2, LOW);
+  digitalWrite(MPU_3, HIGH); 
+  writeToWire(); 
+
+  digitalWrite(MPU_1, HIGH);
+  digitalWrite(MPU_2, HIGH);
+  digitalWrite(MPU_3, LOW);
+  writeToWire(); 
+  
   Serial.println("Initiating handshake with RPi...");
   initialHandshake();
 
@@ -162,18 +193,26 @@ void SensorRead(void *pvParameters)
     // Read the inputs
     for (int i=0; i<NUM_SENSORS; i++) {
       int sensorId = i+1
-      // TODO: @jiahao sensor sampling code
-      // e.g. int sensorValue = analogRead(A0);
-
+      
+      if (sensorId == 1) {
+        digitalWrite(MPU_1, LOW);       
+        digitalWrite(MPU_2, HIGH);
+        digitalWrite(MPU_3, HIGH);
+      } else if (sensorId == 2) {
+        digitalWrite(MPU_1,HIGH);
+        digitalWrite(MPU_2,LOW);
+        digitalWrite(MPU_3, HIGH);
+      } else if (sensorId == 3) {
+        digitalWrite(MPU_1,HIGH);
+        digitalWrite(MPU_2,HIGH);
+        digitalWrite(MPU_3, LOW);
+      }
+      
       // Assemble sensor data packet
-      // TODO: Replace with actual variables
       sensorData.sensorId = sensorId;
-      sensorData.aX = (short)random(-10*sensorId,10*sensorId);
-      sensorData.aY = (short)random(-20*sensorId,20*sensorId);
-      sensorData.aZ = (short)random(-30*sensorId,30*sensorId);
-      sensorData.gX = (short)random(-40*sensorId,40*sensorId);
-      sensorData.gY = (short)random(-50*sensorId,50*sensorId);
-      sensorData.gZ = (short)random(-60*sensorId,60*sensorId);
+      mpu.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ); 
+      mpu.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);   
+      
       // Add to inter-task communication queue
       xQueueSend(queue, &sensorData, portMAX_DELAY);
     }
@@ -256,6 +295,14 @@ void serialize(char *buf, void *p, size_t size) {
 
 void sendSerialData(char *buffer, int len) {
   Serial1.write(buffer, len);
+}
+
+void writeToWire() {
+  Wire.begin();
+  Wire.beginTransmission(MPU_ADDR);  // Begin a transmission to the I2C slave device with the given address
+  Wire.write(0x6B);   // PWR_MGMT_1 register
+  Wire.write(0);      // set to zero (wakes up the MPU-6050)
+  Wire.endTransmission(true);  // Sends a stop message after transmission, releasing the I2C bus.
 }
 
 void loop() {
