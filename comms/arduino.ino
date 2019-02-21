@@ -6,6 +6,7 @@
  * Program Variables
  */
 const int NUM_SENSORS = 3;
+const int NUM_TASKS = 1;
 const int DELAY_INIT_HANDSHAKE = 100;
 const int DELAY_SENSOR_READ = 100;
 const int DELAY_SEND2RPI = 10;
@@ -60,7 +61,7 @@ void setup() {
     Serial.write("Error creating the queue!\n");
   }
 
-  barrierSemaphore = xSemaphoreCreateCounting( NUM_SENSORS, NUM_SENSORS );
+  barrierSemaphore = xSemaphoreCreateCounting(NUM_TASKS, NUM_TASKS);
   if(barrierSemaphore == NULL){
     Serial.write("Error creating the semaphore!\n");
   }
@@ -77,30 +78,30 @@ void setup() {
 
   xTaskCreate(
     SensorRead,
-    "SensorRead1",
+    "SensorRead",
     256, // stack size
-    (void *) 1,
+    NULL,
     1, // priority
     NULL
   );
 
   xTaskCreate(
-    SensorRead,
-    "SensorRead2",
+    PowerRead,
+    "PowerRead",
     256, // stack size
-    (void *) 2,
+    NULL,
     1, // priority
     NULL
   );
 
-  xTaskCreate(
-    SensorRead,
-    "SensorRead3",
-    256, // stack size
-    (void *) 3,
-    1, // priority
-    NULL
-  );
+  // xTaskCreate(
+  //   SensorRead,
+  //   "SensorRead3",
+  //   256, // stack size
+  //   (void *) 3,
+  //   1, // priority
+  //   NULL
+  // );
 
   Serial.println("Setup complete!");
 }
@@ -153,26 +154,42 @@ void Send2Rpi(void *pvParameters)
 void SensorRead(void *pvParameters)
 {
   struct TSensorData sensorData;
-  int sensorId = (uint32_t) pvParameters;
+  // int sensorId = (uint32_t) pvParameters;
   for (;;)
   {
     // Reserve the semaphore
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // Read the inputs
-    // TODO: @jiahao sensor sampling code
-    // e.g. int sensorValue = analogRead(A0);
+    for (int i=0; i<NUM_SENSORS; i++) {
+      int sensorId = i+1
+      // TODO: @jiahao sensor sampling code
+      // e.g. int sensorValue = analogRead(A0);
 
-    // Assemble sensor data packet
-    // TODO: Replace with actual variables
-    sensorData.sensorId = sensorId;
-    sensorData.aX = (short)random(-10*sensorId,10*sensorId);
-    sensorData.aY = (short)random(-20*sensorId,20*sensorId);
-    sensorData.aZ = (short)random(-30*sensorId,30*sensorId);
-    sensorData.gX = (short)random(-40*sensorId,40*sensorId);
-    sensorData.gY = (short)random(-50*sensorId,50*sensorId);
-    sensorData.gZ = (short)random(-60*sensorId,60*sensorId);
-    // Add to inter-task communication queue
-    xQueueSend(queue, &sensorData, portMAX_DELAY);
+      // Assemble sensor data packet
+      // TODO: Replace with actual variables
+      sensorData.sensorId = sensorId;
+      sensorData.aX = (short)random(-10*sensorId,10*sensorId);
+      sensorData.aY = (short)random(-20*sensorId,20*sensorId);
+      sensorData.aZ = (short)random(-30*sensorId,30*sensorId);
+      sensorData.gX = (short)random(-40*sensorId,40*sensorId);
+      sensorData.gY = (short)random(-50*sensorId,50*sensorId);
+      sensorData.gZ = (short)random(-60*sensorId,60*sensorId);
+      // Add to inter-task communication queue
+      xQueueSend(queue, &sensorData, portMAX_DELAY);
+    }
+    vTaskDelay(DELAY_SENSOR_READ);
+  }
+}
+
+void PowerRead(void *pvParameters)
+{
+  struct TPowerData powerData;
+  for (;;)
+  {
+    // Reserve the semaphore
+    xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
+    // TODO: @zhiwei power sampling code
+    xQueueSend(queue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
 }
