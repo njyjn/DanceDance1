@@ -12,9 +12,10 @@ PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
 
-port = None
+port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
-def process_data(port,len):
+
+def process_data(len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
     rawsum = 0 # used to compute checksum
@@ -33,7 +34,8 @@ def process_data(port,len):
     checksum = int(port.read().hex(),16)
     return packet, (checksum == rawsum)
 
-def read_packet(port):
+
+def read_packet():
     packet = {}
     is_valid = True
     start=port.read().hex()
@@ -42,7 +44,7 @@ def read_packet(port):
             packet_code = int(port.read().hex(),16)
             len = int(port.read().hex(),16)
             if packet_code == PACKET_CODE_DATA_RESPONSE and len>0: # Sensor data
-                packet, is_valid = process_data(port,len)
+                packet, is_valid = process_data(len)
             elif packet_code == PACKET_CODE_ACK:
                 packet['packet_code'] = PACKET_CODE_ACK
             elif packet_code == PACKET_CODE_NACK:
@@ -60,42 +62,42 @@ def read_packet(port):
     return packet, is_valid
 
 
-def send_packet(port,packet_code):
+def send_packet(packet_code):
     port.write(struct.pack("B", MESSAGE_START)) # start
     port.write(struct.pack("B", packet_code))
     port.write(struct.pack("B", 0)) # len
 
 
-def handshake_init(port):
+def handshake_init():
     handshake_status = 0
     while handshake_status > -1:
         try:
-            response,checksum = read_packet(port)
+            response,checksum = read_packet()
             # Hello from Arduino
             if handshake_status == 0 and response.get('packet_code') == PACKET_CODE_HELLO:
                 print("Arduino says HELLO...")
                 # Ack to Arduino
-                send_packet(port,PACKET_CODE_ACK)
+                send_packet(PACKET_CODE_ACK)
                 print("Sent HELLO ACK to RPi")
                 handshake_status = 1
             # First Ack from Arduino
             elif handshake_status == 1 and response.get('packet_code') == PACKET_CODE_ACK:
                 print("Arduino says ACK")
                 # Hello to Arduino
-                send_packet(port,PACKET_CODE_HELLO)
+                send_packet(PACKET_CODE_HELLO)
                 print("Sent HELLO to RPi")
                 handshake_status = 2
             # Last Ack from Arduino
             elif handshake_status == 2 and response.get('packet_code') == PACKET_CODE_ACK:
                 print("Arduino says ACK")
                 # Ack to Arduino
-                send_packet(port,PACKET_CODE_ACK)
+                send_packet(PACKET_CODE_ACK)
                 print("Sent ACK to RPi. Handshake complete!")
                 handshake_status = -1
             elif response.get('packet_code') == PACKET_CODE_DATA_RESPONSE:
                 print("Arduino was in the midst of transmission. Reconnecting...")
                 # Ack to Arduino
-                send_packet(port,PACKET_CODE_ACK)
+                send_packet(PACKET_CODE_ACK)
                 print("Sent ACK to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
@@ -106,22 +108,19 @@ def handshake_init(port):
 def init():
     # Initial setup message to console
     print("Hello world! Awaiting initial handshake from Arduino...")
-    port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
     port.flushInput()
     # Initial handshake with RPi
-    handshake_init(port)
+    handshake_init()
 
 
-def run():
+def listen():
     # Process the packets
-    while True:
-        packet, is_valid = read_packet(port)
-        if packet.get('packet_code') == 5:
-            if is_valid:
-                send_packet(port,PACKET_CODE_ACK) # Acknowledge data received
-            else:
-                send_packet(port,PACKET_CODE_NACK) # Reject data and ask to resend
-            print(packet)
-            # TODO: @melvin / @shrishti - Store and process this packet somewhere
-        elif packet.get('packet_code') == 2:
-            handshake_init(port)
+    packet, is_valid = read_packet()
+    if packet.get('packet_code') == 5:
+        if is_valid:
+            send_packet(PACKET_CODE_ACK) # Acknowledge data received
+        else:
+            send_packet(PACKET_CODE_NACK) # Reject data and ask to resend
+        return packet
+    elif packet.get('packet_code') == 2:
+        handshake_init()
