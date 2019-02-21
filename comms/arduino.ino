@@ -40,10 +40,14 @@ struct TSensorData {
   short gZ;
 };
 
+struct TPowerData {
+};
+
 struct TJZONPacket {
   char start;
   char packetCode;
   char len;
+  // struct TPowerData powerData;
   struct TSensorData sensorData[NUM_SENSORS];
 };
 
