@@ -19,17 +19,23 @@ def process_data(len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
     rawsum = 0 # used to compute checksum
+    # get voltage and current values
+    raw_voltage = port.read(2)
+    rawsum = calculate_rawsum(rawsum, raw_voltage)
+    raw_current = port.read(2)
+    rawsum = calculate_rawsum(rawsum, raw_current)
+    packet["voltage"] = struct.unpack("<h", raw_voltage)[0] #in mV
+    packet["current"] = struct.unpack("<h", raw_current)[0] #in mA
+    # get rest of data
     for i in range(len):
         sensor_id = port.read().hex()
         data = []
         rawsum ^= int(sensor_id,16)
         for j in range(NUM_DATA_POINTS):
-            raw_reading = port.read(2)
-            reading = struct.unpack("<h", raw_reading)[0]
+            raw_data_reading = port.read(2)
+            reading = struct.unpack("<h", raw_data_reading)[0]
             data.append(reading)
-            top, bottom = divmod(int(raw_reading.hex(),16),0x100)
-            rawsum ^= top
-            rawsum ^= bottom
+            rawsum = calculate_rawsum(rawsum, raw_data_reading)
         packet[str(sensor_id)] = data
     checksum = int(port.read().hex(),16)
     return packet, (checksum == rawsum)
