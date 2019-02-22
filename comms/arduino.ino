@@ -1,12 +1,11 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
-#include "Wire.h"  
-#include "MPU6050.h" 
-
+#include "Wire.h"
+#include "MPU6050.h"
 
 /*
- * Hardware Pins 
+ * Hardware Pins
  */
 #define MPU_1 48
 #define MPU_2 50
@@ -76,18 +75,18 @@ void setup() {
   digitalWrite(MPU_1, LOW);
   digitalWrite(MPU_2, HIGH);
   digitalWrite(MPU_3, HIGH);
-  writeToWire(); 
-  
+  writeToWire();
+
   digitalWrite(MPU_1, HIGH);
   digitalWrite(MPU_2, LOW);
-  digitalWrite(MPU_3, HIGH); 
-  writeToWire(); 
+  digitalWrite(MPU_3, HIGH);
+  writeToWire();
 
   digitalWrite(MPU_1, HIGH);
   digitalWrite(MPU_2, HIGH);
   digitalWrite(MPU_3, LOW);
-  writeToWire(); 
-  
+  writeToWire();
+
   Serial.println("Initiating handshake with RPi...");
   initialHandshake();
 
@@ -196,10 +195,10 @@ void SensorRead(void *pvParameters)
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // Read the inputs
     for (int i=0; i<NUM_SENSORS; i++) {
-      int sensorId = i+1
-      
+      int sensorId = i+1;
+
       if (sensorId == 1) {
-        digitalWrite(MPU_1, LOW);       
+        digitalWrite(MPU_1, LOW);
         digitalWrite(MPU_2, HIGH);
         digitalWrite(MPU_3, HIGH);
       } else if (sensorId == 2) {
@@ -211,12 +210,12 @@ void SensorRead(void *pvParameters)
         digitalWrite(MPU_2,HIGH);
         digitalWrite(MPU_3, LOW);
       }
-      
+
       // Assemble sensor data packet
       sensorData.sensorId = sensorId;
-      mpu.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ); 
-      mpu.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);   
-      
+      mpu.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ);
+      mpu.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);
+
       // Add to inter-task communication queue
       xQueueSend(queue, &sensorData, portMAX_DELAY);
     }
