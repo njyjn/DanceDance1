@@ -153,8 +153,11 @@ void setup() {
 void Send2Rpi(void *pvParameters)
 {
   (void) pvParameters;
+  const TickType_t xFrequency = DELAY_SEND2RPI;
+  TickType_t xLastWakeTime;
+  xLastWakeTime = xTaskGetTickCount();
   struct TSensorData sensorData;
-
+  struct TPowerData powerData;
   for (;;) {
     struct TJZONPacket msg;
     char bufferPacket[MESSAGE_SIZE_FULL];
