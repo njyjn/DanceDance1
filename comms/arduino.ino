@@ -51,22 +51,24 @@ struct TSensorData {
 };
 
 struct TPowerData {
+  unsigned int mV;
+  unsigned int mA;
 };
 
 struct TJZONPacket {
   char start;
   char packetCode;
   char len;
-  // struct TPowerData powerData;
+  struct TPowerData powerData;
   struct TSensorData sensorData[NUM_SENSORS];
 };
 
 void setup() {
-  
+
   pinMode(MPU_1, OUTPUT);
   pinMode(MPU_2, OUTPUT);
   pinMode(MPU_3, OUTPUT);
-  
+
   // Serial: Debugging console
   Serial.begin(115200);
   // Serial1: TX/RX to RPi
