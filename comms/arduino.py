@@ -41,6 +41,12 @@ def process_data(len):
     return packet, (checksum == rawsum)
 
 
+def calculate_rawsum(rawsum, raw_reading):
+    top, bottom = divmod(int(raw_reading.hex(),16),0x100)
+    rawsum ^= top
+    rawsum ^= bottom
+    return rawsum
+
 def read_packet():
     packet = {}
     is_valid = True
