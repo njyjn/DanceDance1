@@ -1,7 +1,8 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
-#include "Wire.h"
+#include <I2Cdev.h>
+#include "Wire.h"  
 #include "MPU6050.h"
 
 /*
@@ -10,6 +11,8 @@
 #define MPU_1 48
 #define MPU_2 50
 #define MPU_3 52
+
+MPU6050 mpu_sensor(0x68);
 
 /*
  * Program Variables
@@ -215,8 +218,8 @@ void SensorRead(void *pvParameters)
 
       // Assemble sensor data packet
       sensorData.sensorId = sensorId;
-      mpu.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ);
-      mpu.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);
+      mpu_sensor.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ);
+      mpu_sensor.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);
 
       // Add to inter-task communication queue
       xQueueSend(queue, &sensorData, portMAX_DELAY);
