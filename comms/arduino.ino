@@ -2,7 +2,7 @@
 #include <queue.h>
 #include <semphr.h>
 #include <I2Cdev.h>
-#include "Wire.h"  
+#include "Wire.h"
 #include "MPU6050.h"
 
 /*
@@ -12,35 +12,35 @@
 #define MPU_2 50
 #define MPU_3 52
 
-MPU6050 mpu_sensor(0x68);
-
 /*
  * Program Variables
  */
-const int NUM_SENSORS = 3;
-const int MPU_ADDR = 0X68; // I2C address of the MPU-6050
-const int NUM_TASKS = 1;
-const int DELAY_INIT_HANDSHAKE = 100;
-const int DELAY_SENSOR_READ = 100;
-const int DELAY_SEND2RPI = 10;
-const int RESEND_THRESHOLD = 10;
+#define NUM_SENSORS 3
+#define MPU_ADDR 0x68 // I2C address of the MPU-6050
+#define NUM_TASKS 2
+#define DELAY_INIT_HANDSHAKE 100
+#define DELAY_SENSOR_READ 10
+#define DELAY_SEND2RPI 10
+#define RESEND_THRESHOLD 10
+MPU6050 mpu_sensor(MPU_ADDR);
 
 /*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
  */
-const int MESSAGE_START = 55;
-const int MESSAGE_SIZE_NO_DATA = 3;
-const int MESSAGE_SIZE_DATA = NUM_SENSORS * 12 + NUM_SENSORS;
-const int MESSAGE_SIZE_FULL = MESSAGE_SIZE_NO_DATA + MESSAGE_SIZE_DATA + 1;
-const int MESSAGE_PACKET_CODE_INDEX_NO_DATA = 1;
-const int PACKET_CODE_NACK = 0;
-const int PACKET_CODE_ACK = 1;
-const int PACKET_CODE_HELLO = 2;
-const int PACKET_CODE_READ = 3;
-const int PACKET_CODE_WRITE = 4;
-const int PACKET_CODE_DATA_RESPONSE = 5;
+#define MESSAGE_START 55
+#define MESSAGE_SIZE_NO_DATA 3
+#define MESSAGE_SIZE_DATA NUM_SENSORS*12+NUM_SENSORS+4
+#define MESSAGE_SIZE_FULL MESSAGE_SIZE_NO_DATA+MESSAGE_SIZE_DATA+1
+#define MESSAGE_PACKET_CODE_INDEX_NO_DATA 1
+#define PACKET_CODE_NACK 0
+#define PACKET_CODE_ACK 1
+#define PACKET_CODE_HELLO 2
+#define PACKET_CODE_READ 3
+#define PACKET_CODE_WRITE 4
+#define PACKET_CODE_DATA_RESPONSE 5
 
-QueueHandle_t queue;
+QueueHandle_t dataQueue;
+QueueHandle_t powerQueue;
 SemaphoreHandle_t barrierSemaphore;
 
 struct TSensorData {
@@ -95,9 +95,14 @@ void setup() {
   Serial.println("Initiating handshake with RPi...");
   initialHandshake();
 
-  queue = xQueueCreate( NUM_SENSORS, sizeof( struct TSensorData ) );
-  if(queue == NULL){
-    Serial.write("Error creating the queue!\n");
+  dataQueue = xQueueCreate(NUM_SENSORS, sizeof( struct TSensorData ));
+  if(dataQueue == NULL){
+    Serial.write("Error creating the data queue!\n");
+  }
+
+  powerQueue = xQueueCreate(1, sizeof( struct TPowerData ));
+  if(powerQueue == NULL){
+    Serial.write("Error creating the power queue!\n");
   }
 
   barrierSemaphore = xSemaphoreCreateCounting(NUM_TASKS, NUM_TASKS);
@@ -148,8 +153,11 @@ void setup() {
 void Send2Rpi(void *pvParameters)
 {
   (void) pvParameters;
+  const TickType_t xFrequency = DELAY_SEND2RPI;
+  TickType_t xLastWakeTime;
+  xLastWakeTime = xTaskGetTickCount();
   struct TSensorData sensorData;
-
+  struct TPowerData powerData;
   for (;;) {
     struct TJZONPacket msg;
     char bufferPacket[MESSAGE_SIZE_FULL];
@@ -162,8 +170,10 @@ void Send2Rpi(void *pvParameters)
       msg.start = MESSAGE_START;
       msg.packetCode = PACKET_CODE_DATA_RESPONSE;
       msg.len = NUM_SENSORS;
+      xQueueReceive(powerQueue, &powerData, portMAX_DELAY);
+      msg.powerData = powerData;
       for (int i=0;i<NUM_SENSORS;i++) {
-        xQueueReceive(queue, &sensorData, portMAX_DELAY);
+        xQueueReceive(dataQueue, &sensorData, portMAX_DELAY);
         msg.sensorData[i] = sensorData;
       }
       serialize(bufferPacket, &msg, sizeof(msg));
@@ -182,11 +192,11 @@ void Send2Rpi(void *pvParameters)
         resend_count++;
       }
       // Release the semaphores
-      for (int i=0;i<NUM_SENSORS;i++) {
+      for (int i=0;i<NUM_TASKS;i++) {
         xSemaphoreGive(barrierSemaphore);
       }
     }
-    vTaskDelay(DELAY_SEND2RPI);
+    vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
@@ -201,7 +211,6 @@ void SensorRead(void *pvParameters)
     // Read the inputs
     for (int i=0; i<NUM_SENSORS; i++) {
       int sensorId = i+1;
-
       if (sensorId == 1) {
         digitalWrite(MPU_1, LOW);
         digitalWrite(MPU_2, HIGH);
@@ -215,14 +224,12 @@ void SensorRead(void *pvParameters)
         digitalWrite(MPU_2,HIGH);
         digitalWrite(MPU_3, LOW);
       }
-
       // Assemble sensor data packet
       sensorData.sensorId = sensorId;
-      mpu_sensor.getAcceleration(&sensorData.aX, &sensorData.aY, &sensorData.aZ);
-      mpu_sensor.getRotation(&sensorData.gX, &sensorData.gY, &sensorData.gZ);
-
+      mpu_sensor.getAcceleration((int16_t*)&sensorData.aX, (int16_t*)&sensorData.aY, (int16_t*)&sensorData.aZ);
+      mpu_sensor.getRotation((int16_t*)&sensorData.gX, (int16_t*)&sensorData.gY, (int16_t*)&sensorData.gZ);
       // Add to inter-task communication queue
-      xQueueSend(queue, &sensorData, portMAX_DELAY);
+      xQueueSend(dataQueue, &sensorData, portMAX_DELAY);
     }
     vTaskDelay(DELAY_SENSOR_READ);
   }
@@ -236,7 +243,11 @@ void PowerRead(void *pvParameters)
     // Reserve the semaphore
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // TODO: @zhiwei power sampling code
-    xQueueSend(queue, &powerData, portMAX_DELAY);
+
+    // Assemble power data packet
+    powerData.mV = (short)random(0,6000);
+    powerData.mA = (short)random(0,3000);
+    xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
 }
