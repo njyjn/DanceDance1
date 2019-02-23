@@ -1,4 +1,4 @@
-import Queue
+import queue
 
 import socket
 
@@ -15,7 +15,7 @@ import arduino as my_Ard
 import threading
 
 #global variables
-dataQueue = Queue.Queue(10)
+dataQueue = queue.Queue(10)
 queueLock = threading.Lock()
 
 def Main_Run():
