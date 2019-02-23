@@ -32,17 +32,18 @@ class toMLtoServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        #my_pi = RaspberryPi(ip_addr, port_num)
-        #my_ML = ML()
+        my_pi = RaspberryPi(ip_addr, port_num)
+        my_ML = ML()
+        danceMove = ""
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 ML_data = dataQueue.get()
-                print("data got is " + str(ML_data)) #check for multithreading using this line
-                #danceMove = my_ML.give(ML_data)
+                print("data from queue: " + str(ML_data)) #check for multithreading using this line
+                danceMove = my_ML.give(ML_data)
             queueLock.release()
-            #data = Data(danceMove, my_pi.sock)
-            #data.sendData()
+            data = Data(danceMove, my_pi.sock)
+            data.sendData()
 
 class listen(threading.Thread):
     
@@ -55,6 +56,7 @@ class listen(threading.Thread):
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
             if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+                print("data into queue: " + str(packet))
                 dataQueue.put(packet)
             queueLock.release()
 
@@ -75,9 +77,11 @@ class Data():
         self.voltage = 20
         self.power = 20
         self.cumpower = 20
-        dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower))
+        dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
+        print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
-        encryptedData = self.encrypt(paddedMsg)
+        encryptedData =self.encrypt(paddedMsg)
+        # encodedData = encryptedData.encode('utf8')
         self.sock.send(encryptedData)
 
     def pad(self,msg):
