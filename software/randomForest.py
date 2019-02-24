@@ -3,9 +3,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+from loadData import loadData
 
-# enter csv file here
-features = pd.read_csv('datasetSetFinal.csv')
+loadData()
+features = pd.read_csv('output.csv')
 print(features.head(5))
 print('The shape of our features is:', features.shape)
 
