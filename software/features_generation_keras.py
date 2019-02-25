@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import os
-from software.features_extraction import extract_features
 
 labels = [
     'walking', 'walking_upstairs', 'walking_downstairs', 'sitting', 'standing', 'laying', 'stand_to_sit', 'sit_to_stand'
@@ -28,7 +27,7 @@ def create_windows(file_path, window_size, overlap):
     data_readings = df.values  # change to numpy array
     data_segments = []
     label_segments = []
-    # window_size = 200, overlap at 50% = 100, 50hz, 4s, 200 windows for 4s each 0.02s,
+    # window_size = 128, overlap at 50% = 64, 50hz, 2.56s, 128 windows for 2.56s each 0.02s,
     # shape of data_readings is (len(data_readings), 6)
     for i in range(int(len(data_readings)/overlap)-1):
         data_segments.append(data_readings[i*overlap:((i*overlap)+(window_size)), 0:6])
@@ -57,7 +56,7 @@ for j in range(len(labels_dict)):
 
         if i_str == '28' and labels[j] in unavailable_labels:
             continue
-        readings, label = create_windows(os.path.join(data_processed_path, (labels[j] + i_str + ".csv")), 200, 100)
+        readings, label = create_windows(os.path.join(data_processed_path, (labels[j] + i_str + ".csv")), 128, 64)
         for k in range(len(readings)):
             acc_x = []
             acc_y = []
