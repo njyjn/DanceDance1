@@ -13,6 +13,14 @@
 #define MPU_3 52
 
 /*
+ * Hardware Constants
+ */
+const int CURRENT_PIN = A0;    // Input Pin for measuring Current
+const int VOLTAGE_PIN = A1;   // Input Pin for measuring Voltage 
+const float RS = 10;          // Shunt resistor value (in ohms)
+const float VOLTAGE_REF = 5;
+
+/*
  * Program Variables
  */
 #define NUM_SENSORS 3
@@ -238,15 +246,35 @@ void SensorRead(void *pvParameters)
 void PowerRead(void *pvParameters)
 {
   struct TPowerData powerData;
+
+  float currentValue;   // Variable to store value from analog read
+  float voltageValue;
+  float current;       // Calculated current value
+  float voltage;
+  
   for (;;)
   {
     // Reserve the semaphore
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
     // TODO: @zhiwei power sampling code
 
-    // Assemble power data packet
-    powerData.mV = (short)random(0,6000);
-    powerData.mA = (short)random(0,3000);
+    // Read current & voltage values from circuit board
+    currentValue = analogRead(CURRENT_PIN);
+    voltageValue = analogRead(VOLTAGE_PIN);
+
+    // Remap the ADC value into a voltage number (5V reference)
+    currentValue = (currentValue * VOLTAGE_REF) / 1023.0;
+    voltageValue = (voltageValue * VOLTAGE_REF) / 1023.0;
+  
+    // Follow the equation given by the INA169 datasheet to
+    // determine the current flowing through RS. Assume RL = 10k
+    // Is = (Vout x 1k) / (RS x RL)
+    current = currentValue / (10 * RS);
+    voltage = voltageValue * 2;
+    
+    // Assemble power data packet (Multipled by 1k for decimal-short conversion)
+    powerData.mV = (short)(current*1000);
+    powerData.mA = (short)(volatge*1000);
     xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
