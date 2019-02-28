@@ -138,6 +138,7 @@ print(score)
 # accuracy = 100-np.mean(score)
 # print(accuracy)
 
+
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
@@ -171,6 +172,7 @@ def plot_confusion_matrix(cm, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.tight_layout()
+
 
 # Plot non-normalized confusion matrix
 plt.figure()
