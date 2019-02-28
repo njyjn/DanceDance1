@@ -8,9 +8,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.externals import joblib
+
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-data_processed_path = os.path.join(PROJECT_DIR, 'dance-dance-software', 'HAPT Data Set', 'processed')
+data_processed_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'processed')
 features = pd.read_csv(os.path.join(data_processed_path, 'dataFeatures.csv'))
 print('The shape of our features is:', features.shape)
 
@@ -56,22 +58,10 @@ knn = KNeighborsClassifier(n_neighbors=5)
 # Train the model on training data
 knn.fit(train_features, train_labels)
 
-# Use predict method on the test data
-predictions = knn.predict(test_features)
-
-# Calculate the absolute errors
-errors = abs(predictions - test_labels)
-
-# Calculate mean absolute percentage error (MAPE)
-mape = 100 * (errors / (test_labels+1))
-
-# Calculate and display accuracy
-accuracy = 100 - np.mean(mape)
-print('Accuracy:', accuracy, '%.')
-
-# Print out confusion matrix
-conf_mat = confusion_matrix(test_labels, predictions)
-print(conf_mat)
+model_path = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
+print("Saving model.")
+joblib.dump(knn, model_path)
+print("Model successfully saved at %s" % model_path)
 
 ###################################################################################################################
 

@@ -6,9 +6,11 @@ from sklearn.metrics import confusion_matrix
 import os
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
+from sklearn.externals import joblib
+
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-data_processed_path = os.path.join(PROJECT_DIR, 'dance-dance-software', 'HAPT Data Set', 'processed')
+data_processed_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'processed')
 features = pd.read_csv(os.path.join(data_processed_path, 'dataFeatures.csv'))
 print('The shape of our features is:', features.shape)
 
@@ -28,10 +30,10 @@ features = np.array(features)
 # Split the data into training and testing sets
 train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size = 0.25, random_state = 42)
 
-# print('Training Features Shape:', train_features.shape)
-# print('Training Labels Shape:', train_labels.shape)
-# print('Testing Features Shape:', test_features.shape)
-# print('Testing Labels Shape:', test_labels.shape)
+print('Training Features Shape:', train_features.shape)
+print('Training Labels Shape:', train_labels.shape)
+print('Testing Features Shape:', test_features.shape)
+print('Testing Labels Shape:', test_labels.shape)
 
 # Instantiate model with 1000 decision trees
 rf = RandomForestClassifier(n_estimators = 1000, random_state = 42)
@@ -46,6 +48,23 @@ test_features = pd.DataFrame(X_test_array)
 
 # Train the model on training data
 rf.fit(train_features, train_labels)
+
+# Use the forest's predict method on the test data
+predictions = rf.predict(test_features)
+
+# Calculate the absolute errors
+errors = abs(predictions - test_labels)
+
+# Calculate mean absolute percentage error (MAPE)
+mape = 100 * (errors / (test_labels))
+
+# Calculate and display accuracy
+accuracy = 100 - np.mean(mape)
+print('Accuracy:', accuracy, '%.')
+
+# Print out confusion matrix
+conf_mat = confusion_matrix(test_labels, predictions)
+print(conf_mat)
 
 # Number of trees in random forest
 n_estimators = [int(x) for x in np.linspace(start = 200, stop = 2000, num = 10)]
@@ -71,11 +90,11 @@ random_grid = {'n_estimators': n_estimators,
 
 # Random search of parameters, using 3 fold cross validation,
 # search across 100 different combinations, and use all available cores
-rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 5, cv = 4, verbose=2, random_state=42, n_jobs = -1)
+rf = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 5, cv = 4, verbose=2, random_state=42, n_jobs = -1)
 # Fit the random search model
-rf_random.fit(train_features, train_labels)
+rf.fit(train_features, train_labels)
 
-rf_random.best_params_
+rf.best_params_
 
 
 def evaluate(model, test_features, test_labels):
@@ -84,6 +103,14 @@ def evaluate(model, test_features, test_labels):
     mape = 100 * np.mean(errors / test_labels)
     accuracy = 100 - mape
     return accuracy
+
+# K folding
+rf_accuracy = evaluate(rf, test_features, test_labels)
+
+best_random = rf.best_estimator_
+random_accuracy = evaluate(best_random, test_features, test_labels)
+
+print('Improvement of {:0.2f}%.'.format(100 * (random_accuracy - rf_accuracy) / rf_accuracy))
 
 # Use the forest's predict method on the test data
 predictions = rf.predict(test_features)
@@ -102,16 +129,9 @@ print('Accuracy:', accuracy, '%.')
 conf_mat = confusion_matrix(test_labels, predictions)
 print(conf_mat)
 
-# K folding
-rf_accuracy = evaluate(rf, test_features, test_labels)
-
-best_random = rf_random.best_estimator_
-random_accuracy = evaluate(best_random, test_features, test_labels)
-
-print('Improvement of {:0.2f}%.'.format(100 * (random_accuracy - rf_accuracy) / rf_accuracy))
 
 # Get numerical feature importances
-importances = list(rf.feature_importances_)
+# importances = list(rf.feature_importances_)
 
 # List of tuples with variable and importance
 feature_importances = [(feature, round(importance, 4)) for feature, importance in zip(feature_list, importances)]
@@ -121,4 +141,9 @@ feature_importances = sorted(feature_importances, key = lambda x: x[1], reverse 
 
 # Print out the feature and importances
 [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances];
+
+model_path = os.path.join(PROJECT_DIR, 'models', 'randomForest.pkl')
+print("Saving model.")
+joblib.dump(rf, model_path)
+print("Model successfully saved at %s" % model_path)
 
