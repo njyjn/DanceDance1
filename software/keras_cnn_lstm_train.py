@@ -3,7 +3,6 @@ import numpy as np
 from numpy import mean
 from numpy import std
 from numpy import dstack
-from pandas import read_csv
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Flatten
@@ -14,12 +13,17 @@ from keras.layers.convolutional import Conv1D
 from keras.layers.convolutional import MaxPooling1D
 from keras.models import load_model
 from keras.utils import to_categorical
-import sklearn.model_selection
+from sklearn.model_selection import train_test_split
 import pandas as pd
+
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+data_processed_path = os.path.join(PROJECT_DIR, 'data', 'keras_datasets')
+
 
 # load a single file as a numpy array
 def load_file(filepath):
-    dataframe = read_csv(filepath)
+    dataframe = pd.read_csv(filepath, headers=None)
     return dataframe.values
 
 
@@ -62,7 +66,7 @@ def load_dataset(prefix=''):
 # fit and evaluate a model
 def evaluate_model(model, trainX, trainy, testX, testy):
     # define model
-    verbose, epochs, batch_size = 0, 25, 64
+    verbose, epochs, batch_size = 0, 25, 96
     n_timesteps, n_features, n_outputs = trainX.shape[1], trainX.shape[2], trainy.shape[1]
 
     # reshape data into time steps of sub-sequences
@@ -109,25 +113,13 @@ def summarize_results(scores):
     print('Accuracy: %.3f%% (+/-%.3f)' % (m, s))
 
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-data_processed_path = os.path.join(PROJECT_DIR, 'data', 'keras_datasets')
-
 data_x, data_y = load_dataset()
-trainX, testX, trainY, testY = sklearn.model_selection.train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+trainX, testX, trainY, testY = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
 trainY = to_categorical(trainY)
 testY = to_categorical(testY)
 print(trainX.shape, trainY.shape)
 print(testX.shape, testY.shape)
 
-
-# scores = list()
-# for r in range(10):
-#     score = evaluate_model(trainX, trainY, testX, testY)
-#     score = score * 100.0
-#     print('>#%d: %.3f' % (r+1, score))
-#     scores.append(score)
-# # summarize results
-# summarize_results(scores)
 model = train_model(trainX, trainY)
 model_dir = os.path.join(PROJECT_DIR, 'models')
 model_filepath = os.path.join(model_dir, 'firstmodel.h5')
@@ -137,15 +129,3 @@ model.save(model_filepath)
 score = evaluate_model(model, trainX, trainY, testX, testY)
 score = score * 100.0
 print('%.3f' % score)
-
-# n_timesteps, n_features, n_outputs = trainX.shape[1], trainX.shape[2], trainY.shape[1]
-#
-# # reshape data into time steps of sub-sequences
-# n_steps, n_length = 4, 50
-# test = test.reshape((1, n_steps, n_length, n_features))
-# print(len(test))
-# result = model.predict(test, batch_size=64, verbose=0)
-# from pprint import pprint
-# pprint(np.argmax(result[0]))
-#
-# pprint(result[0])
