@@ -33,9 +33,10 @@ def create_windows(file_path, window_size, overlap):
     # shape of data_readings is (len(data_readings), 6)
     for i in range(int(len(data_readings)/overlap)-1):
         data_segments.append(data_readings[i*overlap:((i*overlap)+(window_size-1)), 0:6])
-        file_name_split = file_path.split('\\')
+        file_name_split = file_path.split('/')
         file_name = file_name_split[-1]
         label_name = file_name[:-6]
+        print(file_name[:-6])
         label_segments.append(labels_dict[label_name])
     return data_segments, label_segments
 
@@ -51,20 +52,24 @@ for j in range(len(labels_dict)):
 
         if i_str == '28' and labels[j] in unavailable_labels:
             continue
-        readings, label = create_windows(os.path.join(data_processed_path, (labels[j] + i_str + ".csv")), 200, 100)
+        readings, label = create_windows(os.path.join(data_processed_path, (labels[j] + i_str + ".csv")), 150, 75)
         data_for_extraction.extend(readings)
         labels_for_extraction.extend(label)
 
 features = []
 for i in range(len(data_for_extraction)):
-    features.append(extract_features(np.asarray(data_for_extraction[i])))
+    data_line = extract_features(np.asarray(data_for_extraction[i]))
+    data_line.append(labels_for_extraction[i] + 1)
+    features.append(data_line)
 
 
 data_csv_filename = os.path.join(data_processed_path, 'dataFeatures.csv')
 labels_csv_filename = os.path.join(data_processed_path, 'labelFeatures.csv')
 
 features_df = pd.DataFrame(features)
-features_df.to_csv(data_csv_filename, header=None, index=None, sep=',')
+features_df.to_csv(data_csv_filename, header=["val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8", "val9", "val10",
+                                              "val11", "val12", "val13", "val14", "val15", "val16", "val17", "val18", "val19", "val20",
+                                              "val21", "val22", "val23", "val24", "dance"], index=None, sep=',')
 labels_df = pd.DataFrame(labels_for_extraction)
 labels_df.to_csv(labels_csv_filename, header=None, index=None)
 
