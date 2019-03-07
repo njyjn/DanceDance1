@@ -8,8 +8,8 @@
 /*
  * Hardware Pins
  */
-#define MPU_1 48
-#define MPU_2 50
+#define MPU_1 22
+#define MPU_2 38
 #define MPU_3 52
 
 /*
