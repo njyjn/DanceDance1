@@ -274,7 +274,7 @@ void PowerRead(void *pvParameters)
     
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
     powerData.mV = (short)(current*1000);
-    powerData.mA = (short)(volatge*1000);
+    powerData.mA = (short)(voltage*1000);
     xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
