@@ -10,6 +10,7 @@ from Crypto.Cipher import AES
 
 import base64
 
+import time
 import arduino as my_Ard
 
 import threading
@@ -44,6 +45,7 @@ class toMLtoServer(threading.Thread):
             queueLock.release()
             data = Data(danceMove, my_pi.sock)
             data.sendData()
+            time.sleep(2)
 
 class listen(threading.Thread):
     
@@ -70,9 +72,8 @@ class Data():
     def __init__(self, move, sock):
         self.move = move
         self.sock = sock    
-        #self.ML = ML    
+   
     def sendData(self):
-        #self.move = self.ML.get() #ML module that determines the dance move.
         self.current = 20
         self.voltage = 20
         self.power = 20
@@ -80,9 +81,10 @@ class Data():
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
         print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
-        encryptedData =self.encrypt(paddedMsg)
+        encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
+        print('encrypted + encoded data is : ' + str(encryptedData))
         # encodedData = encryptedData.encode('utf8')
-        self.sock.send(encryptedData)
+        self.sock.sendall(encryptedData)
 
     def pad(self,msg):
         extraChar = len(msg) % 16
@@ -95,7 +97,7 @@ class Data():
         secret_key = "1234512345123451" #dummy key for testing
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(secret_key,AES.MODE_CBC,iv)
-        return base64.b64encode(iv + cipher.encrypt(msg))
+        return base64.b64encode(iv + cipher.encrypt(msg)) #encrypted msg in octets(bytes) is transformed into sets of sextets. sextet value is used to determine the letter in Base64 table
         
 class RaspberryPi():
 
