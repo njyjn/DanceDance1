@@ -17,7 +17,7 @@
  */
 const int CURRENT_PIN = A0;    // Input Pin for measuring Current
 const int VOLTAGE_PIN = A1;   // Input Pin for measuring Voltage 
-const float RS = 10;          // Shunt resistor value (in ohms)
+const float RS = 0.1;          // Shunt resistor value (in ohms)
 const float VOLTAGE_REF = 5;
 
 /*
@@ -273,8 +273,8 @@ void PowerRead(void *pvParameters)
     voltage = voltageValue * 2;
     
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
-    powerData.mV = (short)(current*1000);
-    powerData.mA = (short)(voltage*1000);
+    powerData.mV = (short)(voltage*1000);
+    powerData.mA = (short)(current*1000);
     xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
