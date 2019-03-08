@@ -17,6 +17,10 @@ queueLock = threading.Lock()
 
 def Main_Run():
 
+    data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
+    open(os.path.join(os.pardir, data_filename), 'w+')
+    print('Created file %s in main dir' % (data_filename))
+
     myThread1 = listen()
     myThread1.start()
 
