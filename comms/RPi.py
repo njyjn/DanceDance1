@@ -36,13 +36,22 @@ class toMLtoServer(threading.Thread):
         my_pi = RaspberryPi(ip_addr, port_num)
         my_ML = ML()
         danceMove = ""
+        power = ""
+        current = ""
+        cumpower = ""
+        voltage = ""
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 ML_data = dataQueue.get()
+                voltage = ML_data["voltage"]
+                current = ML_data["current"]
+                cumpower = ML_data["cumpower"]
+                power = ML_data["power"]
                 print("data from queue: " + str(ML_data)) #check for multithreading using this line
                 danceMove = my_ML.give(ML_data)
             queueLock.release()
+            #data = Data(danceMove, my_pi.sock, voltage, current, power, cumpower)
             data = Data(danceMove, my_pi.sock)
             data.sendData()
             time.sleep(2)
