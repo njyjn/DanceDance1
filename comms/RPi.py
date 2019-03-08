@@ -6,6 +6,7 @@ import time
 import threading
 import os
 import arduino as my_Ard
+import csv
 from Crypto import Random
 from Crypto.Cipher import AES
 
@@ -13,20 +14,36 @@ from Crypto.Cipher import AES
 #global variables
 dataQueue = queue.Queue(10)
 queueLock = threading.Lock()
-
+workingCSV = ""
 
 def Main_Run():
+    
+    workingCSV = createCSV()
+    #myThread1 = listen()
+    #myThread1.start()
 
-    data_filename = 'data/transient/' + time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
-    open(os.path.join(os.pardir, data_filename), 'w+')
+    #myThread2 = toMLtoServer()
+    #myThread2.start()
+
+def createCSV():
+    data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
+    open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'w+')
     print('Created file %s in main dir' % (data_filename))
+    return data_filename
 
-    myThread1 = listen()
-    myThread1.start()
-
-    myThread2 = toMLtoServer()
-    myThread2.start()
-
+def appendToCSV(packet_data, data_filename):
+    ML_data = [
+        [] ,
+        [] ,
+        []
+    ]
+    ML_data[0] = packet_data["01"]
+    ML_data[1] = packet_data["02"]
+    ML_data[2] = packet_data["03"]
+    
+    with open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'a', newline = '') as datafile:
+        writer = csv.writer(datafile, delimiter = "\t")
+        writer.writerows(ML_data)    
 
 class toMLtoServer(threading.Thread):
 
@@ -37,16 +54,26 @@ class toMLtoServer(threading.Thread):
         my_pi = RaspberryPi(ip_addr, port_num)
         my_ML = ML()
         danceMove = ""
+        #power = ""
+        #voltage = ""
+        #current = ""
+        #cumpower = ""
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
-                ML_data = dataQueue.get()
-                print("data from queue: " + str(ML_data)) #check for multithreading using this line
-                danceMove = my_ML.give(ML_data)
+                packet_data = dataQueue.get()
+                print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                #power = packet_data["power"]
+                #voltage = packet_data["voltage"]
+                #current = packet_data["current"]
+                #cumpower = packet_data["cumpower"]
+                #danceMove = my_ML.give(packet_data)
             queueLock.release()
+            appendToCSV(packet_data, workingCSV)
+            danceMove = my_ML.give(packet_data) #dummy class for sending
             data = Data(danceMove, my_pi.sock)
             data.sendData()
-            time.sleep(2)
+            #time.sleep(2)
 
 
 class listen(threading.Thread):
