@@ -58,31 +58,29 @@ knn = KNeighborsClassifier(n_neighbors=5)
 # Train the model on training data
 knn.fit(train_features, train_labels)
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
-print("Saving model.")
-joblib.dump(knn, model_path)
-print("Model successfully saved at %s" % model_path)
 
-###################################################################################################################
-
-# from sklearn.model_selection import cross_val_score
-# import numpy as np
-# #create a new KNN model
-# knn_cv = KNeighborsClassifier(n_neighbors=5)
-# #train model with cv of 5
-# cv_scores = cross_val_score(knn_cv, train_features, train_labels, cv=5)
-# #print each cv score (accuracy) and average them
+from sklearn.model_selection import cross_val_score, KFold
+import numpy as np
+#create a new KNN model
+knn_cv = KNeighborsClassifier(n_neighbors=5)
+#train model with cv of 5
+cv_scores = cross_val_score(knn_cv, train_features, train_labels, cv=KFold(n_splits=5))
+#print each cv score (accuracy) and average them
 # print(cv_scores)
-# print('cv_scores mean:{}'.format(np.mean(cv_scores)))
-#
-# from sklearn.model_selection import GridSearchCV
+print('cv_scores mean:{}'.format(np.mean(cv_scores)*100)+'%')
+
 # #create new a knn model
-# knn2 = KNeighborsClassifier()
+# knn2 = KNeighborsClassifier(n_neighbors=5)
 # #create a dictionary of all values we want to test for n_neighbors
-# param_grid = {'n_neighbors': np.arange(1, 25)}
+# param_grid = {'n_neighbors': np.arange(0, train_labels)}
 # #use gridsearch to test all values for n_neighbors
-# knn_gscv = GridSearchCV(knn2, param_grid, cv=5)
+# knn_gscv = GridSearchCV(knn2, param_grid, cv=5, verbose=2)
 # #fit model to data
 # knn_gscv.fit(test_features, test_labels)
 # print(knn_gscv.best_params_)
 # print(knn_gscv.best_score_)
+
+model_path = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
+print("Saving model.")
+joblib.dump(knn, model_path)
+print("Model successfully saved at %s" % model_path)
