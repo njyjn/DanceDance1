@@ -1,35 +1,36 @@
 import queue
-
 import socket
-
 import sys
-
+import base64
+import time
+import threading
+import os
+import arduino as my_Ard
 from Crypto import Random
-
 from Crypto.Cipher import AES
 
-import base64
-
-import time
-import arduino as my_Ard
-
-import threading
 
 #global variables
 dataQueue = queue.Queue(10)
 queueLock = threading.Lock()
 
+
 def Main_Run():
+
+    data_filename = 'data/transient/' + time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
+    open(os.path.join(os.pardir, data_filename), 'w+')
+    print('Created file %s in main dir' % (data_filename))
 
     myThread1 = listen()
     myThread1.start()
-    
+
     myThread2 = toMLtoServer()
     myThread2.start()
 
+
 class toMLtoServer(threading.Thread):
 
-    def __init__(self): 
+    def __init__(self):
         threading.Thread.__init__(self)
 
     def run(self):
@@ -56,11 +57,12 @@ class toMLtoServer(threading.Thread):
             data.sendData()
             time.sleep(2)
 
+
 class listen(threading.Thread):
-    
+
     def __init__(self):
         threading.Thread.__init__(self)
-        
+
     def run(self):
         my_Ard.init()
         while True:
@@ -71,6 +73,7 @@ class listen(threading.Thread):
                 dataQueue.put(packet)
             queueLock.release()
 
+
 class ML():
     #dummy class for ML module
     def give(self, data):
@@ -80,8 +83,8 @@ class ML():
 class Data():
     def __init__(self, move, sock):
         self.move = move
-        self.sock = sock    
-   
+        self.sock = sock
+
     def sendData(self):
         self.current = 20
         self.voltage = 20
@@ -107,7 +110,8 @@ class Data():
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(secret_key,AES.MODE_CBC,iv)
         return base64.b64encode(iv + cipher.encrypt(msg)) #encrypted msg in octets(bytes) is transformed into sets of sextets. sextet value is used to determine the letter in Base64 table
-        
+
+
 class RaspberryPi():
 
     def __init__(self, server_add, server_port):
@@ -115,11 +119,12 @@ class RaspberryPi():
         self.server_port = int(server_port) #port of the server(PC acting as server)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #creates the socket object
         self.connect()
-    
+
     def connect(self):
         server_fullAdd = (self.server_add, self.server_port)
         self.sock.connect(server_fullAdd) #connect to server socket
         print("connected to server websocket!")
+
 
 if __name__ == '__main__':
 
