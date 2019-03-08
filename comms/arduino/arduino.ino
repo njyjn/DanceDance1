@@ -16,7 +16,7 @@
  * Hardware Constants
  */
 const int CURRENT_PIN = A0;    // Input Pin for measuring Current
-const int VOLTAGE_PIN = A1;   // Input Pin for measuring Voltage 
+const int VOLTAGE_PIN = A1;   // Input Pin for measuring Voltage
 const float RS = 0.1;          // Shunt resistor value (in ohms)
 const float VOLTAGE_REF = 5;
 
@@ -37,7 +37,8 @@ MPU6050 mpu_sensor(MPU_ADDR);
  */
 #define MESSAGE_START 55
 #define MESSAGE_SIZE_NO_DATA 3
-#define MESSAGE_SIZE_DATA NUM_SENSORS*12+NUM_SENSORS+4
+#define MESSAGE_SIZE_POWER 8
+#define MESSAGE_SIZE_DATA NUM_SENSORS*12+NUM_SENSORS+MESSAGE_SIZE_POWER
 #define MESSAGE_SIZE_FULL MESSAGE_SIZE_NO_DATA+MESSAGE_SIZE_DATA+1
 #define MESSAGE_PACKET_CODE_INDEX_NO_DATA 1
 #define PACKET_CODE_NACK 0
@@ -64,6 +65,8 @@ struct TSensorData {
 struct TPowerData {
   unsigned int mV;
   unsigned int mA;
+  unsigned int mW;
+  unsigned int mJ;
 };
 
 struct TJZONPacket {
@@ -251,12 +254,11 @@ void PowerRead(void *pvParameters)
   float voltageValue;
   float current;       // Calculated current value
   float voltage;
-  
+
   for (;;)
   {
     // Reserve the semaphore
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
-    // TODO: @zhiwei power sampling code
 
     // Read current & voltage values from circuit board
     currentValue = analogRead(CURRENT_PIN);
@@ -265,16 +267,21 @@ void PowerRead(void *pvParameters)
     // Remap the ADC value into a voltage number (5V reference)
     currentValue = (currentValue * VOLTAGE_REF) / 1023.0;
     voltageValue = (voltageValue * VOLTAGE_REF) / 1023.0;
-  
+
     // Follow the equation given by the INA169 datasheet to
     // determine the current flowing through RS. Assume RL = 10k
     // Is = (Vout x 1k) / (RS x RL)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
-    
+    power = current * voltage;
+    // TODO: @zhiwei calculate cum power
+    cumpower = power;
+
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
     powerData.mV = (short)(voltage*1000);
     powerData.mA = (short)(current*1000);
+    powerData.mW = (short)(power*1000);
+    powerData.mJ = (short)(cumpower*1000);
     xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
