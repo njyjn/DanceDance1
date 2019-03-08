@@ -27,8 +27,8 @@ const float VOLTAGE_REF = 5;
 #define MPU_ADDR 0x68 // I2C address of the MPU-6050
 #define NUM_TASKS 2
 #define DELAY_INIT_HANDSHAKE 100
-#define DELAY_SENSOR_READ 10
-#define DELAY_SEND2RPI 10
+#define DELAY_SENSOR_READ 1
+#define DELAY_SEND2RPI 3
 #define RESEND_THRESHOLD 10
 MPU6050 mpu_sensor(MPU_ADDR);
 
