@@ -19,11 +19,11 @@ workingCSV = ""
 def Main_Run():
     
     workingCSV = createCSV()
-    #myThread1 = listen()
-    #myThread1.start()
+    myThread1 = listen()
+    myThread1.start()
 
-    #myThread2 = toMLtoServer()
-    #myThread2.start()
+    myThread2 = toMLtoServer()
+    myThread2.start()
 
 def createCSV():
     data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'

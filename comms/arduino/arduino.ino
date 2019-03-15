@@ -254,8 +254,11 @@ void PowerRead(void *pvParameters)
   float voltageValue;
   float current;       // Calculated current value
   float voltage;
+  float power;
+  float cumpower;
   unsigned long currentTime;
   unsigned long last_elapsed = 0;
+
 
   for (;;)
   {
