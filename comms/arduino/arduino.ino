@@ -254,12 +254,16 @@ void PowerRead(void *pvParameters)
   float voltageValue;
   float current;       // Calculated current value
   float voltage;
+  unsigned long currentTime;
+  unsigned long last_elapsed = 0;
 
   for (;;)
   {
     // Reserve the semaphore
     xSemaphoreTake(barrierSemaphore, portMAX_DELAY);
 
+    currentTime = millis();
+    
     // Read current & voltage values from circuit board
     currentValue = analogRead(CURRENT_PIN);
     voltageValue = analogRead(VOLTAGE_PIN);
@@ -274,8 +278,8 @@ void PowerRead(void *pvParameters)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
     power = current * voltage;
-    // TODO: @zhiwei calculate cum power
-    cumpower = power;
+    cumpower = power * (currentTime - last_elapsed);
+    last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
     powerData.mV = (short)(voltage*1000);
