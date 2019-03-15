@@ -19,7 +19,8 @@ const int CURRENT_PIN = A0;    // Input Pin for measuring Current
 const int VOLTAGE_PIN = A1;   // Input Pin for measuring Voltage
 const float RS = 0.1;          // Shunt resistor value (in ohms)
 const float VOLTAGE_REF = 5;
-
+const float accel2G = 16384.0;
+const float gyroS = 131.0;
 /*
  * Program Variables
  */
@@ -239,6 +240,14 @@ void SensorRead(void *pvParameters)
       sensorData.sensorId = sensorId;
       mpu_sensor.getAcceleration((int16_t*)&sensorData.aX, (int16_t*)&sensorData.aY, (int16_t*)&sensorData.aZ);
       mpu_sensor.getRotation((int16_t*)&sensorData.gX, (int16_t*)&sensorData.gY, (int16_t*)&sensorData.gZ);
+      
+      sensorData.aX = (int16_t*)(int) ((sensorData.aX / accel2G) * 1000);
+      sensorData.aY = (int16_t*)(int) ((sensorData.aY / accel2G) * 1000);
+      sensorData.aZ = (int16_t*)(int) ((sensorData.aZ / accel2G) * 1000);
+      sensorData.gX = (int16_t*)(int) ((sensorData.gX / gyroS) * 1000);
+      sensorData.gY = (int16_t*)(int) ((sensorData.gY / gyroS) * 1000);
+      sensorData.gZ = (int16_t*)(int) ((sensorData.gZ / gyroS) * 1000); 
+      
       // Add to inter-task communication queue
       xQueueSend(dataQueue, &sensorData, portMAX_DELAY);
     }
