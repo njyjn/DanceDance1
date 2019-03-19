@@ -12,7 +12,7 @@ PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
 
-port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
+port = serial.Serial("/dev/ttyS0", baudrate=38400, timeout=10)
 
 
 def process_data(len):
