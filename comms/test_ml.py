@@ -12,12 +12,12 @@ from Crypto.Cipher import AES
 
 
 #global variables
-dataQueue = queue.Queue(10)
+dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
 workingCSV = ""
 
 def Main_Run():
-    
+    global workingCSV
     workingCSV = createCSV()
     myThread1 = listen()
     myThread1.start()
@@ -33,17 +33,14 @@ def createCSV():
 
 def appendToCSV(packet_data, data_filename):
     ML_data = [
-        [] ,
-        [] ,
-        []
-    ]
-    ML_data[0] = packet_data["01"]
-    ML_data[1] = packet_data["02"]
-    ML_data[2] = packet_data["03"]
+    #    [] ,
+    #   [] ,
+# []
+    ]            
     
     with open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'a', newline = '') as datafile:
-        writer = csv.writer(datafile, delimiter = "\t")
-        writer.writerows(ML_data)    
+        writer = csv.writer(datafile, delimiter = " ")
+        writer.writerow(packet_data["01"]+packet_data["02"]+packet_data["03"])
 
 class toMLtoServer(threading.Thread):
 
@@ -51,9 +48,9 @@ class toMLtoServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
-        my_ML = ML()
-        danceMove = ""
+#        my_pi = RaspberryPi(ip_addr, port_num)
+ #       my_ML = ML()
+  #      danceMove = ""
         #power = ""
         #voltage = ""
         #current = ""
@@ -68,11 +65,11 @@ class toMLtoServer(threading.Thread):
                 #current = packet_data["current"]
                 #cumpower = packet_data["cumpower"]
                 #danceMove = my_ML.give(packet_data)
+                appendToCSV(packet_data, workingCSV)
             queueLock.release()
-            appendToCSV(packet_data, workingCSV)
-            danceMove = my_ML.give(packet_data) #dummy class for sending
-            data = Data(danceMove, my_pi.sock)
-            data.sendData()
+   #         danceMove = my_ML.give(packet_data) #dummy class for sending
+    #        data = Data(danceMove, my_pi.sock)
+     #       data.sendData()
             #time.sleep(2)
 
 
@@ -86,9 +83,10 @@ class listen(threading.Thread):
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
-            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+            if not dataQueue.full() and packet is not None: #check if queue is full. If full, dont put it inside queue
                 print("data into queue: " + str(packet))
                 dataQueue.put(packet)
+                print("queue size: " + str(dataQueue.full()))
             queueLock.release()
 
 
@@ -145,9 +143,4 @@ class RaspberryPi():
 
 
 if __name__ == '__main__':
-
-    ip_addr = sys.argv[1]
-
-    port_num = sys.argv[2]
-
     Main_Run()
