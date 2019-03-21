@@ -134,7 +134,6 @@ def reset():
     print("Resetting connection...")
     port.close()
     port.open()
-    init()
 
 
 def listen():
