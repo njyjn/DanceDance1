@@ -67,7 +67,7 @@ struct TPowerData {
   unsigned int mV;
   unsigned int mA;
   unsigned int mW;
-  unsigned int nJ;
+  unsigned int uJ;
 };
 
 struct TJZONPacket {
@@ -297,7 +297,7 @@ void PowerRead(void *pvParameters)
     powerData.mV = (short)(voltage*1000);
     powerData.mA = (short)(current*1000);
     powerData.mW = (short)(power*1000);
-    powerData.nJ = (short)(cumpower*1000);
+    powerData.uJ = (short)(cumpower*1000);
     xQueueSend(powerQueue, &powerData, portMAX_DELAY);
     vTaskDelay(DELAY_SENSOR_READ);
   }
