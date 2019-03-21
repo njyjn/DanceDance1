@@ -118,7 +118,7 @@ def handshake_init():
                 print("Sent ACK to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
-            print(str(e))
+            reset()
     return True
 
 
@@ -128,6 +128,13 @@ def init():
     port.flushInput()
     # Initial handshake with RPi
     handshake_init()
+
+
+def reset():
+    print("Resetting connection...")
+    port.close()
+    port.open()
+    init()
 
 
 def listen():
