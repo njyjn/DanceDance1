@@ -75,7 +75,7 @@ def read_packet():
             else:
                 is_valid = False
     except Exception as e:
-        print(str(e))
+        reset()
     return packet, is_valid
 
 
