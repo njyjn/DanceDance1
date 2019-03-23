@@ -270,19 +270,19 @@ void getSensorData(TSensorData * packet, char sensorId) {
     digitalWrite(MPU_3,LOW);
   }
 
-//  Wire.beginTransmission(MPU_ADDR);
-//  Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
-//  if (Wire.endTransmission(false) == 0) {
-//    if (Wire.requestFrom(MPU_ADDR,14,true) == 14) {  // request a total of 14 registers
-//      aX=Wire.read()<<8|Wire.read();  // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-//      aY=Wire.read()<<8|Wire.read();  // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-//      aZ=Wire.read()<<8|Wire.read();  // 0x3F (AC  m CEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-//      Wire.read()<<8|Wire.read();  // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
-//      gX=Wire.read()<<8|Wire.read();  // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-//      gY=Wire.read()<<8|Wire.read();  // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-//      gZ=Wire.read()<<8|Wire.read();  // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
-//    }
-//  }
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
+  if (Wire.endTransmission(false) == 0) {
+    if (Wire.requestFrom(MPU_ADDR,14,true) == 14) {  // request a total of 14 registers
+      aX=Wire.read()<<8|Wire.read();  // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+      aY=Wire.read()<<8|Wire.read();  // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+      aZ=Wire.read()<<8|Wire.read();  // 0x3F (AC  m CEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+      Wire.read()<<8|Wire.read();  // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
+      gX=Wire.read()<<8|Wire.read();  // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+      gY=Wire.read()<<8|Wire.read();  // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+      gZ=Wire.read()<<8|Wire.read();  // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    }
+  }
 
   aX = ((aX / accel2G) * 1000);
   aY = ((aY / accel2G) * 1000);
