@@ -69,7 +69,7 @@ struct TPowerData {
   unsigned short mV;
   unsigned short mA;
   unsigned short mW;
-  unsigned short mJ;
+  unsigned short uJ;
 };
 
 struct TJZONPacket {
@@ -317,21 +317,16 @@ void PowerRead(void *pvParameters)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
     power = current * voltage;
-  //    cumpower = power * (currentTime - last_elapsed);
-    cumpower = 0;
+    cumpower += power * (currentTime - last_elapsed);
     last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
-    powerData.mV = (unsigned short)(voltage*1000);
-    powerData.mA = (unsigned short)(current*1000);
-    powerData.mW = (unsigned short)(power*1000);
-    powerData.mJ = (unsigned short)(cumpower*1000);
-
-    if (xSemaphoreTake(powerSemaphore, 0)) {
-      xQueueSend(powerQueue, &powerData, 1);
-      xSemaphoreGive(powerSemaphore);
-    }
-    vTaskDelayUntil(&xLastWakeTime,DELAY_POWER_READ/portTICK_PERIOD_MS);
+    powerData.mV = (short)(voltage*1000);
+    powerData.mA = (short)(current*1000);
+    powerData.mW = (short)(power*1000);
+    powerData.uJ = (short)(cumpower*1000);
+    xQueueSend(powerQueue, &powerData, portMAX_DELAY);
+    vTaskDelay(DELAY_SENSOR_READ);
   }
 }
 
