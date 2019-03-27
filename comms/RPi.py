@@ -12,7 +12,7 @@ from Crypto.Cipher import AES
 
 
 #global variables
-dataQueue = queue.Queue(10)
+dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
 workingCSV = ""
 
