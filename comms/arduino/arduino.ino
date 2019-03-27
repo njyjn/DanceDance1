@@ -38,7 +38,7 @@
  */
 #define MESSAGE_START 55
 #define MESSAGE_SIZE_NO_DATA 3
-#define MESSAGE_SIZE_POWER 8
+#define MESSAGE_SIZE_POWER 10
 #define MESSAGE_SIZE_DATA NUM_SENSORS*12+NUM_SENSORS+MESSAGE_SIZE_POWER
 #define MESSAGE_SIZE_FULL MESSAGE_SIZE_NO_DATA+MESSAGE_SIZE_DATA+1
 #define MESSAGE_PACKET_CODE_INDEX_NO_DATA 1
@@ -69,7 +69,7 @@ struct TPowerData {
   unsigned short mV;
   unsigned short mA;
   unsigned short mW;
-  unsigned short uJ;
+  unsigned long uJ;
 };
 
 struct TJZONPacket {
@@ -326,10 +326,10 @@ void PowerRead(void *pvParameters)
     last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
-    powerData.mV = (short)(voltage*1000);
-    powerData.mA = (short)(current*1000);
-    powerData.mW = (short)(power*1000);
-    powerData.uJ = (short)(cumpower*1000);
+    powerData.mV = (unsigned short)(voltage*1000);
+    powerData.mA = (unsigned short)(current*1000);
+    powerData.mW = (unsigned short)(power*1000);
+    powerData.uJ = (unsigned long)(cumpower*1000);
     // Get power readings from queue
     if (xSemaphoreTake(powerSemaphore, 3)) {
       xQueueSend(powerQueue, &powerData, 3);

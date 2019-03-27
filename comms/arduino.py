@@ -25,12 +25,12 @@ def process_data(len):
     rawsum = calculate_rawsum(rawsum, raw_current)
     raw_power = port.read(2)
     rawsum = calculate_rawsum(rawsum, raw_power)
-    raw_cumpower = port.read(2)
-    rawsum = calculate_rawsum(rawsum, raw_cumpower)    
+    raw_cumpower = port.read(4)
+    rawsum = calculate_rawsum(rawsum, raw_cumpower)
     packet["voltage"] = struct.unpack("<H", raw_voltage)[0] #in mV
     packet["current"] = struct.unpack("<H", raw_current)[0] #in mA
     packet["power"] = struct.unpack("<H", raw_power)[0] #in mW
-    packet["cumpower"] = struct.unpack("<H", raw_cumpower)[0] #in mJ
+    packet["cumpower"] = struct.unpack("<L", raw_cumpower)[0] #in uJ
     # get rest of data
     for i in range(len):
         sensor_id = port.read().hex()
