@@ -14,36 +14,15 @@ from Crypto.Cipher import AES
 #global variables
 dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
-workingCSV = ""
+
 
 def Main_Run():
     
-    workingCSV = createCSV()
     myThread1 = listen()
     myThread1.start()
 
     myThread2 = toMLtoServer()
     myThread2.start()
-
-def createCSV():
-    data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
-    open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'w+')
-    print('Created file %s in main dir' % (data_filename))
-    return data_filename
-
-def appendToCSV(packet_data, data_filename):
-    ML_data = [
-        [] ,
-        [] ,
-        []
-    ]
-    ML_data[0] = packet_data["01"]
-    ML_data[1] = packet_data["02"]
-    ML_data[2] = packet_data["03"]
-    
-    with open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'a', newline = '') as datafile:
-        writer = csv.writer(datafile, delimiter = "\t")
-        writer.writerows(ML_data)    
 
 class toMLtoServer(threading.Thread):
 
@@ -54,25 +33,24 @@ class toMLtoServer(threading.Thread):
         my_pi = RaspberryPi(ip_addr, port_num)
         my_ML = ML()
         danceMove = ""
-        #power = ""
-        #voltage = ""
-        #current = ""
-        #cumpower = ""
+        power = ""
+        voltage = ""
+        current = ""
+        cumpower = ""
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                #power = packet_data["power"]
-                #voltage = packet_data["voltage"]
-                #current = packet_data["current"]
-                #cumpower = packet_data["cumpower"]
-                #danceMove = my_ML.give(packet_data)
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                power = packet_data["power"]
+                voltage = packet_data["voltage"]
+                current = packet_data["current"]
+                cumpower = packet_data["cumpower"]
+                danceMove = my_ML.give(packet_data)
             queueLock.release()
-            appendToCSV(packet_data, workingCSV)
-            danceMove = my_ML.give(packet_data) #dummy class for sending
-            data = Data(danceMove, my_pi.sock)
-            data.sendData()
+            #danceMove = my_ML.give(packet_data["01"] + packet_data["02"] + packet_data["03"]) #dummy class for sending
+            data = Data(my_pi.sock)
+            data.sendData(danceMove, power, voltage, current, cumpower)
             #time.sleep(2)
 
 
@@ -87,7 +65,7 @@ class listen(threading.Thread):
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
             if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
-                print("data into queue: " + str(packet))
+                #print("data into queue: " + str(packet))
                 dataQueue.put(packet)
             queueLock.release()
 
@@ -99,21 +77,20 @@ class ML():
 
 
 class Data():
-    def __init__(self, move, sock):
-        self.move = move
+    def __init__(self, sock):
         self.sock = sock
 
-    def sendData(self):
-        self.current = 20
-        self.voltage = 20
-        self.power = 20
-        self.cumpower = 20
+    def sendData(self, move, power, voltage, current, cumpower):
+        self.move = move
+        self.current = current
+        self.voltage = voltage
+        self.power = power
+        self.cumpower = cumpower
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
         print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
         print('encrypted + encoded data is : ' + str(encryptedData))
-        # encodedData = encryptedData.encode('utf8')
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
