@@ -14,7 +14,6 @@ PACKET_CODE_DATA_RESPONSE = 5
 
 port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
-
 def process_data(len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
@@ -70,7 +69,7 @@ def read_packet():
             else:
                 is_valid = False
     except Exception as e:
-        print(str(e))
+        reset()
     return packet, is_valid
 
 
@@ -113,7 +112,7 @@ def handshake_init():
                 print("Sent ACK to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
-            print(str(e))
+            reset()
     return True
 
 
@@ -123,6 +122,12 @@ def init():
     port.flushInput()
     # Initial handshake with RPi
     handshake_init()
+
+
+def reset():
+    print("Resetting connection...")
+    port.close()
+    port.open()
 
 
 def listen():

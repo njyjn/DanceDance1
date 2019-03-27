@@ -1,7 +1,9 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
+#include <I2Cdev.h>
 #include "Wire.h"
+#include "MPU6050.h"
 
 /*
  * Hardware Pins
@@ -27,11 +29,11 @@
 #define MPU_ADDR 0x68 // I2C address of the MPU-6050
 #define NUM_TASKS 1
 #define DELAY_INIT_HANDSHAKE 100
-#define DELAY_SENSOR_READ 50
+#define DELAY_SENSOR_READ 100
 #define DELAY_POWER_READ 1000
-#define DELAY_SEND2RPI 50
-#define RESEND_THRESHOLD 0
-//MPU6050 mpu_sensor(MPU_ADDR);
+#define DELAY_SEND2RPI 100
+#define RESEND_THRESHOLD 1
+MPU6050 mpu_sensor(MPU_ADDR);
 
 /*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
@@ -48,7 +50,6 @@
 #define PACKET_CODE_READ 3
 #define PACKET_CODE_WRITE 4
 #define PACKET_CODE_DATA_RESPONSE 5
-#define PACKET_CODE_RESET 6
 
 QueueHandle_t dataQueue;
 SemaphoreHandle_t dataSemaphore;
@@ -69,7 +70,7 @@ struct TPowerData {
   unsigned short mV;
   unsigned short mA;
   unsigned short mW;
-  unsigned short uJ;
+  unsigned short mJ;
 };
 
 struct TJZONPacket {
@@ -83,13 +84,30 @@ struct TJZONPacket {
 void setup() {
   // Serial: Debugging console
   Serial.begin(115200);
-  // Serial3: TX/RX to RPi
-  Serial3.begin(115200);
+  // Serial1: TX/RX to RPi
+//  Serial1.begin(115200);
 
-  Serial.println("Setting up I2C...");
-  initI2C();
+  Serial.println("Setting up...");
 
-  dataQueue = xQueueCreate(50, sizeof( struct TSensorData[3] ));
+  pinMode(MPU_1, OUTPUT);
+  pinMode(MPU_2, OUTPUT);
+  pinMode(MPU_3, OUTPUT);
+
+  Wire.begin();
+  digitalWrite(MPU_1, LOW);
+  digitalWrite(MPU_2, HIGH);
+  digitalWrite(MPU_3, HIGH);
+  writeToWire();
+  digitalWrite(MPU_1, HIGH);
+  digitalWrite(MPU_2, LOW);
+  digitalWrite(MPU_3, HIGH);
+  writeToWire();
+  digitalWrite(MPU_1, HIGH);
+  digitalWrite(MPU_2, HIGH);
+  digitalWrite(MPU_3, LOW);
+  writeToWire();
+
+  dataQueue = xQueueCreate(10, sizeof( struct TSensorData[3] ));
   if(dataQueue == NULL){
     Serial.write("Error creating the data queue!\n");
   }
@@ -107,8 +125,8 @@ void setup() {
   xSemaphoreGive(dataSemaphore);
   xSemaphoreGive(powerSemaphore);
 
-  Serial.println("Initiating handshake with RPi...");
-  initialHandshake();
+//  Serial.println("Initiating handshake with RPi...");
+//  initialHandshake();
 
   xTaskCreate(
     SendToRpi,
@@ -124,7 +142,7 @@ void setup() {
     "SensorRead",
     1024, // Stack size
     NULL,
-    2, // priority
+    1, // priority
     NULL
   );
 
@@ -158,15 +176,14 @@ void SendToRpi(void *pvParameters)
     // Get sensor readings from queue
     if (xSemaphoreTake(dataSemaphore, 0)) {
       if (xQueueReceive(dataQueue, &sensorData, 0)) {
-        Serial.print("TSem");
         for (int i=0;i<NUM_SENSORS;i++) {
-//          Serial.print("Sensor "); Serial.print(i); Serial.print(": ");
-//          Serial.print(sensorData[i].aX); Serial.print(",");
-//          Serial.print(sensorData[i].aY); Serial.print(",");
-//          Serial.print(sensorData[i].aZ); Serial.print(",");
-//          Serial.print(sensorData[i].gX); Serial.print(",");
-//          Serial.print(sensorData[i].gY); Serial.print(",");
-//          Serial.print(sensorData[i].gZ); Serial.print("\n");
+          Serial.print("Sensor "); Serial.print(i); Serial.print(": ");
+          Serial.print(sensorData[i].aX); Serial.print(",");
+          Serial.print(sensorData[i].aY); Serial.print(",");
+          Serial.print(sensorData[i].aZ); Serial.print(",");
+          Serial.print(sensorData[i].gX); Serial.print(",");
+          Serial.print(sensorData[i].gY); Serial.print(",");
+          Serial.print(sensorData[i].gZ); Serial.print("\n");
           msg.sensorData[i] = sensorData[i];
         }
       }
@@ -186,25 +203,25 @@ void SendToRpi(void *pvParameters)
     Serial.print(powerData.mJ); Serial.print("\n");
     msg.powerData = powerData;
 
-    serialize(bufferPacket, &msg, sizeof(msg));
-    while (acknowledged == 0 && resend_count <= RESEND_THRESHOLD) {
-      sendSerialData(bufferPacket, sizeof(bufferPacket));
-      Serial.println("Data sent... ");
-      if (Serial3.available()) {
-        Serial3.readBytes(bufferAck, MESSAGE_SIZE_NO_DATA);
-        if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
-          Serial.println("Acknowledged!");
-          acknowledged = 1;
-        } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_NACK) {
-          Serial.println("Resend!");
-        } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_RESET) {
-//          initI2C(1);
-          Serial.println("Reset I2C!");
-          return;
-        }
-      }
-      resend_count++;
-    }
+    Serial.flush();
+//    powerData = PowerRead();
+//    msg.powerData = powerData;
+//    Serial.println("Done...!");
+//    serialize(bufferPacket, &msg, sizeof(msg));
+//    while (acknowledged == 0 && resend_count <= RESEND_THRESHOLD) {
+//      sendSerialData(bufferPacket, sizeof(bufferPacket));
+//      Serial.println("Data sent... ");
+//      if (Serial1.available()) {
+//        Serial1.readBytes(bufferAck, MESSAGE_SIZE_NO_DATA);
+//        if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
+//          Serial.println("Acknowledged!");
+//          acknowledged = 1;
+//        } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_NACK) {
+//          Serial.println("Resend!");
+//        }
+//      }
+//      resend_count++;
+//    }
     vTaskDelayUntil(&xLastWakeTime,DELAY_SEND2RPI/portTICK_PERIOD_MS);
   }
 }
@@ -221,6 +238,7 @@ void SensorRead(void *pvParameters)
       sensorData[i] = sensorDatum;
     }
     if (xSemaphoreTake(dataSemaphore, 0)) {
+      Serial.println("Sending data...");
       xQueueSend(dataQueue, &sensorData, 1);
       xSemaphoreGive(dataSemaphore);
     }
@@ -273,12 +291,12 @@ void getSensorData(TSensorData * packet, char sensorId) {
   gY = ((gY / gyroS) * 1000);
   gZ = ((gZ / gyroS) * 1000);
 
-//  Serial.print(aX);  Serial.print(", ");
-//  Serial.print(aY);  Serial.print(", ");
-//  Serial.print(aZ);  Serial.print(", ");
-//  Serial.print(gX);  Serial.print(", ");
-//  Serial.print(gY);  Serial.print(", ");
-//  Serial.print(gZ);  Serial.print("]");
+  Serial.print(aX);  Serial.print(", ");
+  Serial.print(aY);  Serial.print(", ");
+  Serial.print(aZ);  Serial.print(", ");
+  Serial.print(gX);  Serial.print(", ");
+  Serial.print(gY);  Serial.print(", ");
+  Serial.print(gZ);  Serial.print("\n");
 //  if (sensorId != 3) Serial.print(",");
 
   packet->aX = aX;
@@ -304,9 +322,12 @@ void PowerRead(void *pvParameters)
 
   for (;;) {
     currentTime = millis();
-    // Read current & voltage values from circuit board
-    currentValue = analogRead(CURRENT_PIN);
-    voltageValue = analogRead(VOLTAGE_PIN);
+  // Read current & voltage values from circuit board
+//  currentValue = analogRead(CURRENT_PIN);
+//  voltageValue = analogRead(VOLTAGE_PIN);
+    currentValue = currentTime;
+    voltageValue = currentTime;
+
     // Remap the ADC value into a voltage number (5V reference)
     currentValue = (currentValue * VOLTAGE_REF) / 1023.0;
     voltageValue = (voltageValue * VOLTAGE_REF) / 1023.0;
@@ -317,16 +338,22 @@ void PowerRead(void *pvParameters)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
     power = current * voltage;
-    cumpower += power * (currentTime - last_elapsed);
+  //    cumpower = power * (currentTime - last_elapsed);
+    cumpower = 0;
     last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
-    powerData.mV = (short)(voltage*1000);
-    powerData.mA = (short)(current*1000);
-    powerData.mW = (short)(power*1000);
-    powerData.uJ = (short)(cumpower*1000);
-    xQueueSend(powerQueue, &powerData, portMAX_DELAY);
-    vTaskDelay(DELAY_SENSOR_READ);
+    powerData.mV = (unsigned short)(voltage*1000);
+    powerData.mA = (unsigned short)(current*1000);
+    powerData.mW = (unsigned short)(power*1000);
+    powerData.mJ = (unsigned short)(cumpower*1000);
+
+    if (xSemaphoreTake(powerSemaphore, 0)) {
+      Serial.println("Sending power...");
+      xQueueSend(powerQueue, &powerData, 1);
+      xSemaphoreGive(powerSemaphore);
+    }
+    vTaskDelayUntil(&xLastWakeTime,DELAY_POWER_READ/portTICK_PERIOD_MS);
   }
 }
 
@@ -342,7 +369,7 @@ void initialHandshake() {
     sendSerialData(bufferSend, sizeof(bufferSend));
     //Serial.println("Sent HELLO to RPi");
     // Get ACK from RPi
-    Serial3.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+    Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
     if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
       //Serial.println("Got HELLO ACK from RPi");
       // Send ACK to RPi
@@ -351,7 +378,7 @@ void initialHandshake() {
       sendSerialData(bufferSend, sizeof(bufferSend));
       //Serial.println("Sent first ACK to RPi");
       // Get HELLO from RPi
-      Serial3.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+      Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
       if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_HELLO) {
         //Serial.println("Got HELLO from RPi");
         // Send Ack to RPi
@@ -360,7 +387,7 @@ void initialHandshake() {
         sendSerialData(bufferSend, sizeof(bufferSend));
         //Serial.println("Sent HELLO ACK to RPi");
         // Get Ack from RPi
-        Serial3.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
+        Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
         if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
           // Success!
           //Serial.println("Got last ACK from RPi");
@@ -391,57 +418,14 @@ void serialize(char *buf, void *p, size_t size) {
 }
 
 void sendSerialData(char *buffer, int len) {
-  Serial3.write(buffer, len);
+  Serial1.write(buffer, len);
 }
 
 void writeToWire() {
-  Wire.begin();
-  Serial.print('a');
   Wire.beginTransmission(MPU_ADDR);  // Begin a transmission to the I2C slave device with the given address
-  Serial.print('b');
   Wire.write(0x6B);   // PWR_MGMT_1 register
-  Serial.print('c');
   Wire.write(0);      // set to zero (wakes up the MPU-6050)
-  Serial.print('d');
-  Serial.print(Wire.endTransmission(true));  // Sends a stop message after transmission, releasing the I2C bus.
-  Serial.print('e');
-}
-
-void initI2C() {
-  delay(100);
-  int i = 0;
-  Serial.print(i++);
-  pinMode(MPU_1, OUTPUT);
-  Serial.print(i++);
-  pinMode(MPU_2, OUTPUT);
-  Serial.print(i++);
-  pinMode(MPU_3, OUTPUT);
-  Serial.print(i++);
-
-  digitalWrite(MPU_1, LOW);
-  Serial.print(i++);
-  digitalWrite(MPU_2, HIGH);
-  Serial.print(i++);
-  digitalWrite(MPU_3, HIGH);
-  Serial.print(i++);
-  writeToWire();
-  Serial.print(i++);
-  digitalWrite(MPU_1, HIGH);
-  Serial.print(i++);
-  digitalWrite(MPU_2, LOW);
-  Serial.print(i++);
-  digitalWrite(MPU_3, HIGH);
-  Serial.print(i++);
-  writeToWire();
-  Serial.print(i++);
-  digitalWrite(MPU_1, HIGH);
-  Serial.print(i++);
-  digitalWrite(MPU_2, HIGH);
-  Serial.print(i++);
-  digitalWrite(MPU_3, LOW);
-  Serial.print(i++);
-  writeToWire();
-  Serial.print(i++);
+  Wire.endTransmission(true);  // Sends a stop message after transmission, releasing the I2C bus.
 }
 
 void loop() {
