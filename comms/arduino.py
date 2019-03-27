@@ -66,12 +66,6 @@ def read_packet():
                 packet['packet_code'] = PACKET_CODE_ACK
             elif packet_code == PACKET_CODE_NACK:
                 packet['packet_code'] = PACKET_CODE_NACK
-            elif packet_code == PACKET_CODE_HELLO:
-                packet['packet_code'] = PACKET_CODE_HELLO
-            elif packet_code == PACKET_CODE_READ:
-                packet['packet_code'] = PACKET_CODE_READ
-            elif packet_code == PACKET_CODE_WRITE:
-                packet['packet_code'] = PACKET_CODE_WRITE
             else:
                 is_valid = False
     except Exception as e:
