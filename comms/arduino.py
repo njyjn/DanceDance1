@@ -69,7 +69,7 @@ def read_packet():
             else:
                 is_valid = False
     except Exception as e:
-        reset()
+        print(str(e))
     return packet, is_valid
 
 
@@ -112,7 +112,7 @@ def handshake_init():
                 print("Sent ACK to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
-            reset()
+            print(str(e))
     return True
 
 
