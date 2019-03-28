@@ -11,12 +11,10 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from keras.models import load_model
 import numpy as np
-from sklearn.externals import joblib
-import tensorflow as tf
-from features_extraction import extract_features
+
 
 #global variables
-dataQueue = queue.Queue(90)
+dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
 labels_dict = {
     0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
@@ -24,15 +22,8 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path_keras = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
-model_path_rf = os.path.join(PROJECT_DIR, 'models', 'randomForest.pkl')
-model_path_knn = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
-model_path_svm = os.path.join(PROJECT_DIR, 'models', 'svm.pkl')
-model_keras = load_model(model_path_keras)
-graph = tf.get_default_graph()
-model_rf = joblib.load(model_path_rf)
-model_knn = joblib.load(model_path_knn)
-model_svm = joblib.load(model_path_svm)
+model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model = load_model(model_path)
 n_features = 18
 # reshape data into time steps of sub-sequences
 n_steps, n_length = 4, 15
@@ -46,11 +37,11 @@ def normalise(x, minx, maxx):
 
 
 def Main_Run():
-    
-    myThread1 = toMLtoServer()
+
+    myThread1 = listen()
     myThread1.start()
 
-    myThread2 = listen()
+    myThread2 = toMLtoServer()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
@@ -80,20 +71,19 @@ class toMLtoServer(threading.Thread):
             queueLock.release()
             #ML prediction
             if len(ml_data) == 60:
-                for arr in ml_data:
-                    for i in range(len(arr)):
-                        if i < 3:
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(3, 6):
-                            arr[i] = normalise(arr[i], -250000, 250000)
-                        elif i in range(6, 9):
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(9, 12):
-                            arr[i] = normalise(arr[i], -250000, 250000)
-                        elif i in range(12, 15):
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(15, 18):
-                            arr[i] = normalise(arr[i], -250000, 250000)
+                for i in range(len(ml_data)):
+                    if i < 3:
+                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
+                    elif i in range(3, 6):
+                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
+                    elif i in range(6, 9):
+                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
+                    elif i in range(9, 12):
+                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
+                    elif i in range(12, 15):
+                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
+                    elif i in range(15, 18):
+                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
                 arr_data = []
                 for array in ml_data:
                     arr_raw = []
@@ -107,27 +97,10 @@ class toMLtoServer(threading.Thread):
                 test_sample = arr_data
                 test_sample = np.array(test_sample)
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
-                data_line = extract_features(np.asarray(ml_data))
-                result_keras = model_keras.predict(test_sample, batch_size=96, verbose=0)
-                result_int_keras = int(np.argmax(result_keras[0]))
-                danceMove = labels_dict[result_int_keras]
-
-                prediction_knn = model_knn.predict(data_line)
-                prediction_rf = model_rf.predict(data_line)
-                prediction_svm = model_svm.predict(data_line)
-
-                pred_list = []
-                pred_list.append(prediction_knn[0])
-                pred_list.append(prediction_rf[0])
-                pred_list.append(prediction_svm[0])
-                pred_list.append(danceMove)
-
-                from collections import Counter
-
-                most_common, num_most_common = Counter(pred_list).most_common(1)[0]
-                if num_most_common >= 3:
-                    danceMove = most_common
-
+                print(test_sample.shape)
+                result = model.predict(test_sample, batch_size=96, verbose=0)
+                result_int = int(np.argmax(result[0]))
+                danceMove = labels_dict[result_int]
                 ml_data = []
                 data = Data(my_pi.sock)
                 data.sendData(danceMove, power, voltage, current, cumpower)
