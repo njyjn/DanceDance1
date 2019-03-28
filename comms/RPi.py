@@ -11,10 +11,11 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from keras.models import load_model
 import numpy as np
+import tensorflow as tf
 
 
 #global variables
-dataQueue = queue.Queue(1000)
+dataQueue = queue.Queue(90)
 queueLock = threading.Lock()
 labels_dict = {
     0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
@@ -22,8 +23,9 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'thirdmodel.h5')
 model = load_model(model_path)
+graph = tf.get_default_graph()
 n_features = 18
 # reshape data into time steps of sub-sequences
 n_steps, n_length = 4, 15
@@ -38,10 +40,10 @@ def normalise(x, minx, maxx):
 
 def Main_Run():
     
-    myThread1 = listen()
+    myThread1 = toMLtoServer()
     myThread1.start()
 
-    myThread2 = toMLtoServer()
+    myThread2 = listen()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
@@ -71,19 +73,20 @@ class toMLtoServer(threading.Thread):
             queueLock.release()
             #ML prediction
             if len(ml_data) == 60:
-                for i in range(len(ml_data)):
-                    if i < 3:
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(3, 6):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
-                    elif i in range(6, 9):
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(9, 12):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
-                    elif i in range(12, 15):
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(15, 18):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
+                for arr in ml_data:
+                    for i in range(len(arr)):
+                        if i < 3:
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(3, 6):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(6, 9):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(9, 12):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(12, 15):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(15, 18):
+                            arr[i] = normalise(arr[i], -250000, 250000)
                 arr_data = []
                 for array in ml_data:
                     arr_raw = []
@@ -97,16 +100,18 @@ class toMLtoServer(threading.Thread):
                 test_sample = arr_data
                 test_sample = np.array(test_sample)
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
-                print(test_sample.shape)
-                result = model.predict(test_sample, batch_size=96, verbose=0)
+                with graph.as_default():
+                       result = model.predict(test_sample, batch_size=96, verbose=0)
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
-                ml_data = []
                 data = Data(my_pi.sock)
                 data.sendData(danceMove, power, voltage, current, cumpower)
+            if len(ml_data) == 90:
                 queueLock.acquire()
                 dataQueue.queue.clear()
-                time.sleep(2)
+                if dataQueue.empty(): 
+                    print("queue has been emptied for new window")
+                ml_data = []
                 queueLock.release()
 
 
@@ -117,6 +122,7 @@ class listen(threading.Thread):
 
     def run(self):
         my_Ard.init()
+        time.sleep(1.5)
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
@@ -151,6 +157,7 @@ class Data():
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
+        paddedMsg = ""
         extraChar = len(msg) % 16
         if extraChar > 0: #if msg size is under or over 16 char size
             padsize = 16 - extraChar
