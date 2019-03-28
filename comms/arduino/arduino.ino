@@ -28,10 +28,9 @@
 #define NUM_TASKS 1
 #define DELAY_INIT_HANDSHAKE 100
 #define DELAY_SENSOR_READ 8
-#define DELAY_POWER_READ 1000
+#define DELAY_POWER_READ 100
 #define DELAY_SEND2RPI 10
 #define RESEND_THRESHOLD 0
-//MPU6050 mpu_sensor(MPU_ADDR);
 
 /*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
@@ -323,6 +322,9 @@ void PowerRead(void *pvParameters)
     voltage = voltageValue * 2;
     power = current * voltage;
     cumpower += power * (currentTime - last_elapsed);
+//    Serial.print("Current: "); Serial.print(currentValue); Serial.println(current);
+//    Serial.print("Voltage: "); Serial.print(voltageValue); Serial.println(voltage);
+//    Serial.print("Cumpower: "); Serial.println(cumpower);
     last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
@@ -335,7 +337,7 @@ void PowerRead(void *pvParameters)
       xQueueSend(powerQueue, &powerData, 3);
       xSemaphoreGive(powerSemaphore);
     }
-    vTaskDelay(DELAY_SENSOR_READ);
+    vTaskDelayUntil(&xLastWakeTime,DELAY_POWER_READ/portTICK_PERIOD_MS);
   }
 }
 
@@ -349,30 +351,30 @@ void initialHandshake() {
     msg = generateHandshakeMessage(PACKET_CODE_HELLO);
     memcpy(bufferSend, &msg, sizeof(msg));
     sendSerialData(bufferSend, sizeof(bufferSend));
-    //Serial.println("Sent HELLO to RPi");
+    Serial.println("Sent HELLO to RPi");
     // Get ACK from RPi
     Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
     if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
-      //Serial.println("Got HELLO ACK from RPi");
+      Serial.println("Got HELLO ACK from RPi");
       // Send ACK to RPi
       msg = generateHandshakeMessage(PACKET_CODE_ACK);
       memcpy(bufferSend, &msg, sizeof(msg));
       sendSerialData(bufferSend, sizeof(bufferSend));
-      //Serial.println("Sent first ACK to RPi");
+      Serial.println("Sent first ACK to RPi");
       // Get HELLO from RPi
       Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
       if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_HELLO) {
-        //Serial.println("Got HELLO from RPi");
+        Serial.println("Got HELLO from RPi");
         // Send Ack to RPi
         msg = generateHandshakeMessage(PACKET_CODE_ACK);
         memcpy(bufferSend, &msg, sizeof(msg));
         sendSerialData(bufferSend, sizeof(bufferSend));
-        //Serial.println("Sent HELLO ACK to RPi");
+        Serial.println("Sent HELLO ACK to RPi");
         // Get Ack from RPi
         Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
         if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
           // Success!
-          //Serial.println("Got last ACK from RPi");
+          Serial.println("Got last ACK from RPi");
           return;
         }
       }
