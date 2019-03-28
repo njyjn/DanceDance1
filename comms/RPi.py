@@ -12,10 +12,11 @@ from Crypto.Cipher import AES
 from keras.models import load_model
 import numpy as np
 from sklearn.externals import joblib
-
+import tensorflow as tf
+from features_extraction import extract_features
 
 #global variables
-dataQueue = queue.Queue(1000)
+dataQueue = queue.Queue(90)
 queueLock = threading.Lock()
 labels_dict = {
     0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
@@ -28,6 +29,7 @@ model_path_rf = os.path.join(PROJECT_DIR, 'models', 'randomForest.pkl')
 model_path_knn = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
 model_path_svm = os.path.join(PROJECT_DIR, 'models', 'svm.pkl')
 model_keras = load_model(model_path_keras)
+graph = tf.get_default_graph()
 model_rf = joblib.load(model_path_rf)
 model_knn = joblib.load(model_path_knn)
 model_svm = joblib.load(model_path_svm)
@@ -45,10 +47,10 @@ def normalise(x, minx, maxx):
 
 def Main_Run():
     
-    myThread1 = listen()
+    myThread1 = toMLtoServer()
     myThread1.start()
 
-    myThread2 = toMLtoServer()
+    myThread2 = listen()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
@@ -105,14 +107,14 @@ class toMLtoServer(threading.Thread):
                 test_sample = arr_data
                 test_sample = np.array(test_sample)
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
-                print(test_sample.shape)
+                data_line = extract_features(np.asarray(ml_data))
                 result_keras = model_keras.predict(test_sample, batch_size=96, verbose=0)
                 result_int_keras = int(np.argmax(result_keras[0]))
                 danceMove = labels_dict[result_int_keras]
 
-                prediction_knn = model_knn.predict(ml_data)
-                prediction_rf = model_rf.predict(ml_data)
-                prediction_svm = model_svm.predict(ml_data)
+                prediction_knn = model_knn.predict(data_line)
+                prediction_rf = model_rf.predict(data_line)
+                prediction_svm = model_svm.predict(data_line)
 
                 pred_list = []
                 pred_list.append(prediction_knn[0])
