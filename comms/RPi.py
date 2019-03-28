@@ -60,7 +60,7 @@ class toMLtoServer(threading.Thread):
 
     def run(self):
         my_pi = RaspberryPi(ip_addr, port_num)
-        my_ML = ML()
+        #my_ML = ML()
         danceMove = ""
         power = ""
         voltage = ""
@@ -129,9 +129,12 @@ class toMLtoServer(threading.Thread):
                     danceMove = most_common
 
                 ml_data = []
-            data = Data(my_pi.sock)
-            data.sendData(danceMove, power, voltage, current, cumpower)
-            #time.sleep(2)
+                data = Data(my_pi.sock)
+                data.sendData(danceMove, power, voltage, current, cumpower)
+                queueLock.acquire()
+                dataQueue.queue.clear()
+                time.sleep(2)
+                queueLock.release()
 
 
 class listen(threading.Thread):
@@ -148,6 +151,7 @@ class listen(threading.Thread):
                 #print("data into queue: " + str(packet))
                 dataQueue.put(packet)
             queueLock.release()
+
 
 
 class ML():
