@@ -349,30 +349,30 @@ void initialHandshake() {
     msg = generateHandshakeMessage(PACKET_CODE_HELLO);
     memcpy(bufferSend, &msg, sizeof(msg));
     sendSerialData(bufferSend, sizeof(bufferSend));
-    //Serial.println("Sent HELLO to RPi");
+    Serial.println("Sent HELLO to RPi");
     // Get ACK from RPi
     Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
     if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
-      //Serial.println("Got HELLO ACK from RPi");
+      Serial.println("Got HELLO ACK from RPi");
       // Send ACK to RPi
       msg = generateHandshakeMessage(PACKET_CODE_ACK);
       memcpy(bufferSend, &msg, sizeof(msg));
       sendSerialData(bufferSend, sizeof(bufferSend));
-      //Serial.println("Sent first ACK to RPi");
+      Serial.println("Sent first ACK to RPi");
       // Get HELLO from RPi
       Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
       if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_HELLO) {
-        //Serial.println("Got HELLO from RPi");
+        Serial.println("Got HELLO from RPi");
         // Send Ack to RPi
         msg = generateHandshakeMessage(PACKET_CODE_ACK);
         memcpy(bufferSend, &msg, sizeof(msg));
         sendSerialData(bufferSend, sizeof(bufferSend));
-        //Serial.println("Sent HELLO ACK to RPi");
+        Serial.println("Sent HELLO ACK to RPi");
         // Get Ack from RPi
         Serial1.readBytes(bufferReceive, MESSAGE_SIZE_NO_DATA);
         if (bufferReceive[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_ACK) {
           // Success!
-          //Serial.println("Got last ACK from RPi");
+          Serial.println("Got last ACK from RPi");
           return;
         }
       }

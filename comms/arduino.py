@@ -101,21 +101,21 @@ def handshake_init():
                 print("Arduino says HELLO...")
                 # Ack to Arduino
                 send_packet(PACKET_CODE_ACK)
-                print("Sent HELLO ACK to RPi")
+                print("Sent HELLO ACK to Arduino")
                 handshake_status = 1
             # First Ack from Arduino
             elif handshake_status == 1 and response.get('packet_code') == PACKET_CODE_ACK:
                 print("Arduino says ACK")
                 # Hello to Arduino
                 send_packet(PACKET_CODE_HELLO)
-                print("Sent HELLO to RPi")
+                print("Sent HELLO to Arduino")
                 handshake_status = 2
             # Last Ack from Arduino
             elif handshake_status == 2 and response.get('packet_code') == PACKET_CODE_ACK:
-                print("Arduino says ACK")
+                print("Arduino says HELLO ACK")
                 # Ack to Arduino
                 send_packet(PACKET_CODE_ACK)
-                print("Sent ACK to RPi. Handshake complete!")
+                print("Sent ACK to Arduino. Handshake complete!")
                 handshake_status = -1
             elif response.get('packet_code') == PACKET_CODE_DATA_RESPONSE:
                 print("Arduino was in the midst of transmission. Reconnecting...")
