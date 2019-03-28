@@ -28,10 +28,9 @@
 #define NUM_TASKS 1
 #define DELAY_INIT_HANDSHAKE 100
 #define DELAY_SENSOR_READ 8
-#define DELAY_POWER_READ 1000
+#define DELAY_POWER_READ 100
 #define DELAY_SEND2RPI 10
 #define RESEND_THRESHOLD 0
-//MPU6050 mpu_sensor(MPU_ADDR);
 
 /*
  *  JZON 1.1 CONSTANTS (DO NOT CUSTOMIZE)
@@ -323,6 +322,9 @@ void PowerRead(void *pvParameters)
     voltage = voltageValue * 2;
     power = current * voltage;
     cumpower += power * (currentTime - last_elapsed);
+//    Serial.print("Current: "); Serial.print(currentValue); Serial.println(current);
+//    Serial.print("Voltage: "); Serial.print(voltageValue); Serial.println(voltage);
+//    Serial.print("Cumpower: "); Serial.println(cumpower);
     last_elapsed = currentTime;
 
     // Assemble power data packet (Multipled by 1k for decimal-short conversion)
@@ -335,7 +337,7 @@ void PowerRead(void *pvParameters)
       xQueueSend(powerQueue, &powerData, 3);
       xSemaphoreGive(powerSemaphore);
     }
-    vTaskDelay(DELAY_SENSOR_READ);
+    vTaskDelayUntil(&xLastWakeTime,DELAY_POWER_READ/portTICK_PERIOD_MS);
   }
 }
 
