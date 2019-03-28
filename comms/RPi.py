@@ -71,19 +71,20 @@ class toMLtoServer(threading.Thread):
             queueLock.release()
             #ML prediction
             if len(ml_data) == 60:
-                for i in range(len(ml_data)):
-                    if i < 3:
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(3, 6):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
-                    elif i in range(6, 9):
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(9, 12):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
-                    elif i in range(12, 15):
-                        ml_data[i] = normalise(ml_data[i], -2000, 2000)
-                    elif i in range(15, 18):
-                        ml_data[i] = normalise(ml_data[i], -250000, 250000)
+                for arr in ml_data:
+                    for i in range(len(arr)):
+                        if i < 3:
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(3, 6):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(6, 9):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(9, 12):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(12, 15):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(15, 18):
+                            arr[i] = normalise(arr[i], -250000, 250000)
                 arr_data = []
                 for array in ml_data:
                     arr_raw = []
