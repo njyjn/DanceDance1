@@ -8,7 +8,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_x_train_path = os.path.join(PROJECT_DIR, 'data', 'Train')
 x_train_file = os.path.join(data_x_train_path, 'X_train.txt')
 data_raw_path = os.path.join(PROJECT_DIR, 'data', 'raw')
-label_file = os.path.join(data_raw_path, 'labels.txt')
+label_file = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', 'labels.txt')
 
 
 with open(label_file, 'r') as in_file:
@@ -43,8 +43,8 @@ with open(label_file, 'r') as in_file:
         print(acc_filename_to_extract)
         print(gyro_filename_to_extract)
 
-        acc_filename_to_extract_path = os.path.join(data_raw_path, acc_filename_to_extract)
-        gyro_filename_to_extract_path = os.path.join(data_raw_path, gyro_filename_to_extract)
+        acc_filename_to_extract_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', acc_filename_to_extract)
+        gyro_filename_to_extract_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', gyro_filename_to_extract)
         acc_readings = []
         gyro_readings = []
 
