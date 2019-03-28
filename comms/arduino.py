@@ -56,7 +56,7 @@ def calculate_rawsum(rawsum, raw_reading, mode=None):
 
 
 def calculate_rawsum_4b(rawsum, raw_reading):
-    top, bottom = divmod(int(raw_reading.hex(),16),0x1000)
+    top, bottom = divmod(int(raw_reading.hex(),16),0x10000)
     rawsum = calculate_rawsum(rawsum, top, "INT")
     rawsum = calculate_rawsum(rawsum, bottom, "INT")
     return rawsum
