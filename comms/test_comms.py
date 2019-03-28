@@ -1,7 +1,8 @@
-from arduino import listen
+from arduino import listen, init
 
 
 print("Welcome to debug mode!")
-while true:
+init()
+while True:
     packet = listen()
     print(packet)

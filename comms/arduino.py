@@ -14,7 +14,6 @@ PACKET_CODE_DATA_RESPONSE = 5
 
 port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
-
 def process_data(len):
     packet = {}
     packet['packet_code'] = PACKET_CODE_DATA_RESPONSE
@@ -24,8 +23,14 @@ def process_data(len):
     rawsum = calculate_rawsum(rawsum, raw_voltage)
     raw_current = port.read(2)
     rawsum = calculate_rawsum(rawsum, raw_current)
-    packet["voltage"] = struct.unpack("<h", raw_voltage)[0] #in mV
-    packet["current"] = struct.unpack("<h", raw_current)[0] #in mA
+    raw_power = port.read(2)
+    rawsum = calculate_rawsum(rawsum, raw_power)
+    raw_cumpower = port.read(4)
+    rawsum = calculate_rawsum_4b(rawsum, raw_cumpower)
+    packet["voltage"] = struct.unpack("<H", raw_voltage)[0] #in mV
+    packet["current"] = struct.unpack("<H", raw_current)[0] #in mA
+    packet["power"] = struct.unpack("<H", raw_power)[0] #in mW
+    packet["cumpower"] = struct.unpack("<L", raw_cumpower)[0] #in uJ
     # get rest of data
     for i in range(len):
         sensor_id = port.read().hex()
@@ -41,11 +46,21 @@ def process_data(len):
     return packet, (checksum == rawsum)
 
 
-def calculate_rawsum(rawsum, raw_reading):
-    top, bottom = divmod(int(raw_reading.hex(),16),0x100)
+def calculate_rawsum(rawsum, raw_reading, mode=None):
+    if mode is None:
+        raw_reading = int(raw_reading.hex(),16)
+    top, bottom = divmod(raw_reading,0x100)
     rawsum ^= top
     rawsum ^= bottom
     return rawsum
+
+
+def calculate_rawsum_4b(rawsum, raw_reading):
+    top, bottom = divmod(int(raw_reading.hex(),16),0x10000)
+    rawsum = calculate_rawsum(rawsum, top, "INT")
+    rawsum = calculate_rawsum(rawsum, bottom, "INT")
+    return rawsum
+
 
 def read_packet():
     packet = {}
@@ -63,10 +78,6 @@ def read_packet():
                 packet['packet_code'] = PACKET_CODE_NACK
             elif packet_code == PACKET_CODE_HELLO:
                 packet['packet_code'] = PACKET_CODE_HELLO
-            elif packet_code == PACKET_CODE_READ:
-                packet['packet_code'] = PACKET_CODE_READ
-            elif packet_code == PACKET_CODE_WRITE:
-                packet['packet_code'] = PACKET_CODE_WRITE
             else:
                 is_valid = False
     except Exception as e:
@@ -123,6 +134,12 @@ def init():
     port.flushInput()
     # Initial handshake with RPi
     handshake_init()
+
+
+def reset():
+    print("Resetting connection...")
+    port.close()
+    port.open()
 
 
 def listen():

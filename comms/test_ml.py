@@ -14,15 +14,33 @@ from Crypto.Cipher import AES
 #global variables
 dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
-
+workingCSV = ""
 
 def Main_Run():
-    
+    global workingCSV
+    workingCSV = createCSV()
     myThread1 = listen()
     myThread1.start()
 
     myThread2 = toMLtoServer()
     myThread2.start()
+
+def createCSV():
+    data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
+    open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'w+')
+    print('Created file %s in main dir' % (data_filename))
+    return data_filename
+
+def appendToCSV(packet_data, data_filename):
+    ML_data = [
+    #    [] ,
+    #   [] ,
+# []
+    ]            
+    
+    with open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'a', newline = '') as datafile:
+        writer = csv.writer(datafile, delimiter = " ")
+        writer.writerow(packet_data["01"]+packet_data["02"]+packet_data["03"])
 
 class toMLtoServer(threading.Thread):
 
@@ -30,27 +48,28 @@ class toMLtoServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
-        my_ML = ML()
-        danceMove = ""
-        power = ""
-        voltage = ""
-        current = ""
-        cumpower = ""
+#        my_pi = RaspberryPi(ip_addr, port_num)
+ #       my_ML = ML()
+  #      danceMove = ""
+        #power = ""
+        #voltage = ""
+        #current = ""
+        #cumpower = ""
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = packet_data["cumpower"]
-                danceMove = my_ML.give(packet_data)
+                print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                #power = packet_data["power"]
+                #voltage = packet_data["voltage"]
+                #current = packet_data["current"]
+                #cumpower = packet_data["cumpower"]
+                #danceMove = my_ML.give(packet_data)
+                appendToCSV(packet_data, workingCSV)
             queueLock.release()
-            #danceMove = my_ML.give(packet_data["01"] + packet_data["02"] + packet_data["03"]) #dummy class for sending
-            data = Data(my_pi.sock)
-            data.sendData(danceMove, power, voltage, current, cumpower)
+   #         danceMove = my_ML.give(packet_data) #dummy class for sending
+    #        data = Data(danceMove, my_pi.sock)
+     #       data.sendData()
             #time.sleep(2)
 
 
@@ -64,9 +83,10 @@ class listen(threading.Thread):
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
-            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
-                #print("data into queue: " + str(packet))
+            if not dataQueue.full() and packet is not None: #check if queue is full. If full, dont put it inside queue
+                print("data into queue: " + str(packet))
                 dataQueue.put(packet)
+                print("queue size: " + str(dataQueue.full()))
             queueLock.release()
 
 
@@ -77,20 +97,21 @@ class ML():
 
 
 class Data():
-    def __init__(self, sock):
+    def __init__(self, move, sock):
+        self.move = move
         self.sock = sock
 
-    def sendData(self, move, power, voltage, current, cumpower):
-        self.move = move
-        self.current = current
-        self.voltage = voltage
-        self.power = power
-        self.cumpower = cumpower
+    def sendData(self):
+        self.current = 20
+        self.voltage = 20
+        self.power = 20
+        self.cumpower = 20
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
         print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
         print('encrypted + encoded data is : ' + str(encryptedData))
+        # encodedData = encryptedData.encode('utf8')
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
@@ -122,9 +143,4 @@ class RaspberryPi():
 
 
 if __name__ == '__main__':
-
-    ip_addr = sys.argv[1]
-
-    port_num = sys.argv[2]
-
     Main_Run()
