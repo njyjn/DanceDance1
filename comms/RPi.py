@@ -144,10 +144,10 @@ class Data():
         self.power = power
         self.cumpower = cumpower
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
-        print("sending over data: " + dataToSend)
+        print("sending over data: " + str(dataToSend))
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
-        print('encrypted + encoded data is : ' + str(encryptedData))
+        #print('encrypted + encoded data is : ' + str(encryptedData))
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
