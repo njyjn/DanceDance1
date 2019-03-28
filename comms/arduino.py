@@ -26,7 +26,7 @@ def process_data(len):
     raw_power = port.read(2)
     rawsum = calculate_rawsum(rawsum, raw_power)
     raw_cumpower = port.read(4)
-    rawsum = calculate_rawsum(rawsum, raw_cumpower)
+    rawsum = calculate_rawsum_4b(rawsum, raw_cumpower)
     packet["voltage"] = struct.unpack("<H", raw_voltage)[0] #in mV
     packet["current"] = struct.unpack("<H", raw_current)[0] #in mA
     packet["power"] = struct.unpack("<H", raw_power)[0] #in mW
@@ -51,6 +51,14 @@ def calculate_rawsum(rawsum, raw_reading):
     rawsum ^= top
     rawsum ^= bottom
     return rawsum
+
+
+def calculate_rawsum_4b(rawsum, raw_reading):
+    top, bottom = divmod(int(raw_reading.hex(),16),0x1000)
+    rawsum = calculate_rawsum(rawsum, top)
+    rawsum = calculate_rawsum(rawsum, bottom)
+    return rawsum
+
 
 def read_packet():
     packet = {}
