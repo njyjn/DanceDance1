@@ -93,10 +93,10 @@ with open(os.path.join(data_raw_path, filename), 'r') as data_file:
     # X_train_array = sc.fit_transform(features)
     # Assign the scaled data to a DataFrame & use the index and columns arguments to keep your original indices and
     # column names:
-    train_features = pd.DataFrame(features)
+    # train_features = pd.DataFrame(features)
     # Center test data with the μ & σ computed (fitted) on training data
 
-    print(train_features.shape)
+    # print(train_features.shape)
     prediction_knn = knn.predict(features)
     prediction_rf = rf.predict(features)
     prediction_svm = svm.predict(features)
