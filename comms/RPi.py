@@ -11,6 +11,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from keras.models import load_model
 import numpy as np
+from sklearn.externals import joblib
 
 
 #global variables
@@ -22,8 +23,14 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
-model = load_model(model_path)
+model_path_keras = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model_path_rf = os.path.join(PROJECT_DIR, 'models', 'randomForest.pkl')
+model_path_knn = os.path.join(PROJECT_DIR, 'models', 'kNN.pkl')
+model_path_svm = os.path.join(PROJECT_DIR, 'models', 'svm.pkl')
+model_keras = load_model(model_path_keras)
+model_rf = joblib.load(model_path_rf)
+model_knn = joblib.load(model_path_knn)
+model_svm = joblib.load(model_path_svm)
 n_features = 18
 # reshape data into time steps of sub-sequences
 n_steps, n_length = 4, 15
@@ -98,9 +105,26 @@ class toMLtoServer(threading.Thread):
                 test_sample = np.array(test_sample)
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
                 print(test_sample.shape)
-                result = model.predict(test_sample, batch_size=96, verbose=0)
-                result_int = int(np.argmax(result[0]))
-                danceMove = labels_dict[result_int]
+                result_keras = model_keras.predict(test_sample, batch_size=96, verbose=0)
+                result_int_keras = int(np.argmax(result_keras[0]))
+                danceMove = labels_dict[result_int_keras]
+
+                prediction_knn = model_knn.predict(ml_data)
+                prediction_rf = model_rf.predict(ml_data)
+                prediction_svm = model_svm.predict(ml_data)
+
+                pred_list = []
+                pred_list.append(prediction_knn[0])
+                pred_list.append(prediction_rf[0])
+                pred_list.append(prediction_svm[0])
+                pred_list.append(danceMove)
+
+                from collections import Counter
+
+                most_common, num_most_common = Counter(pred_list).most_common(1)[0]
+                if num_most_common >= 3:
+                    danceMove = most_common
+
                 ml_data = []
                 data = Data(my_pi.sock)
                 data.sendData(danceMove, power, voltage, current, cumpower)
