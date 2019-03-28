@@ -40,10 +40,10 @@ def normalise(x, minx, maxx):
 
 def Main_Run():
     
-    myThread1 = toMLtoServer()
+    myThread1 = listen()
     myThread1.start()
 
-    myThread2 = listen()
+    myThread2 = toMLtoServer()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
