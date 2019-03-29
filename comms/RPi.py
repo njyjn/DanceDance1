@@ -15,7 +15,7 @@ import tensorflow as tf
 
 
 #global variables
-dataQueue = queue.Queue(90)
+dataQueue = queue.Queue(100)
 queueLock = threading.Lock()
 labels_dict = {
     0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
@@ -23,7 +23,7 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'thirdmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
