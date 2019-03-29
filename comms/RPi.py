@@ -60,6 +60,8 @@ class toMLtoServer(threading.Thread):
         current = ""
         cumpower = ""
         ml_data = []
+        predictions = ["0","1","2"]
+        j=0
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
@@ -107,15 +109,20 @@ class toMLtoServer(threading.Thread):
                        result = model.predict(test_sample, batch_size=96, verbose=0)
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
-                data = Data(my_pi.sock)
-                data.sendData(danceMove, power, voltage, current, cumpower)
-            if len(ml_data) == 90:
-                queueLock.acquire()
-                dataQueue.queue.clear()
-                if dataQueue.empty(): 
-                    print("queue has been emptied for new window")
+                index = j % 3
+                predictions[index] = danceMove
+                j = j + 1
+                print(predictions)
+                if all(prediction==predictions[0] for prediction in predictions):
+                    predictions = ["0","1","2"]
+                    data = Data(my_pi.sock)
+                    data.sendData(danceMove, power, voltage, current, cumpower)
+                    queueLock.acquire()
+                    dataQueue.queue.clear()
+                    if dataQueue.empty(): 
+                        print("queue has been emptied for new window")
+                    queueLock.release()
                 ml_data = []
-                queueLock.release()
 
 
 class listen(threading.Thread):
