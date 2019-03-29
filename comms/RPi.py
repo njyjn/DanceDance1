@@ -53,7 +53,7 @@ class toMLtoServer(threading.Thread):
 
     def run(self):
         my_pi = RaspberryPi(ip_addr, port_num)
-        #my_ML = ML()
+        time.sleep(10)
         danceMove = ""
         power = ""
         voltage = ""
@@ -65,10 +65,13 @@ class toMLtoServer(threading.Thread):
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
                 #print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                if packet_data is None:
+                    print("None received")
+                    continue 
                 power = packet_data["power"]
                 voltage = packet_data["voltage"]
                 current = packet_data["current"]
-                cumpower = packet_data["cumpower"]
+                cumpower = int(packet_data["cumpower"] / 1000)
                 ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
             queueLock.release()
             #ML prediction
@@ -122,7 +125,6 @@ class listen(threading.Thread):
 
     def run(self):
         my_Ard.init()
-        time.sleep(1.5)
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
