@@ -23,7 +23,7 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'onesecondCVmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'cnnmodel.h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
