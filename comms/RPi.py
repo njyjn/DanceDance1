@@ -23,12 +23,12 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'onesecondCVmodel.h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
 # reshape data into time steps of sub-sequences
-n_steps, n_length = 4, 15
+n_steps, n_length = 4, 5
 # for i in range(len(test_samples)):
 #     test_samples[i] = test_samples[i].reshape((1, n_steps, n_length, n_features))
 
@@ -41,19 +41,19 @@ def normalise(x, minx, maxx):
 def Main_Run():
     
     myThread1 = listen()
-    myThread1.start()
-
     myThread2 = toMLtoServer()
+    input("Press ENTER when server is ready...")
+    print("Started!")
+    myThread1.start()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.my_pi = RaspberryPi(ip_addr, port_num)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
-        time.sleep(10)
         danceMove = ""
         power = ""
         voltage = ""
@@ -77,7 +77,7 @@ class toMLtoServer(threading.Thread):
                 ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
             queueLock.release()
             #ML prediction
-            if len(ml_data) == 60:
+            if len(ml_data) == 20:
                 for arr in ml_data:
                     for i in range(len(arr)):
                         if i < 3:
@@ -107,6 +107,8 @@ class toMLtoServer(threading.Thread):
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
                 with graph.as_default():
                        result = model.predict(test_sample, batch_size=96, verbose=0)
+                       
+                model.reset_states()
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
                 index = j % 3
@@ -115,23 +117,27 @@ class toMLtoServer(threading.Thread):
                 print(predictions)
                 if all(prediction==predictions[0] for prediction in predictions):
                     predictions = ["0","1","2"]
-                    data = Data(my_pi.sock)
+                    data = Data(self.my_pi.sock)
                     data.sendData(danceMove, power, voltage, current, cumpower)
-                    queueLock.acquire()
-                    dataQueue.queue.clear()
-                    if dataQueue.empty(): 
-                        print("queue has been emptied for new window")
-                    queueLock.release()
+                    #queueLock.acquire()
+                    #dataQueue.queue.clear()
+                    time.sleep(1.5)
+                    my_Ard.clear_buffer()
+                    #if dataQueue.empty(): 
+                        #print("queue has been emptied for new window")
+                    #queueLock.release()
                 ml_data = []
-
+                dataQueue.queue.clear()
+                print("data queue has been cleared")
 
 class listen(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        my_Ard.init()
 
     def run(self):
-        my_Ard.init()
+        my_Ard.clear_buffer()
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
