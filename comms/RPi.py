@@ -18,7 +18,7 @@ import tensorflow as tf
 dataQueue = queue.Queue(100)
 queueLock = threading.Lock()
 labels_dict = {
-    0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
+    0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
 }
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
