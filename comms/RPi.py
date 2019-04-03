@@ -66,15 +66,17 @@ class toMLtoServer(threading.Thread):
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line 
                 if packet_data is None:
-                    print("None received")
-                    continue 
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = int(packet_data["cumpower"] / 1000)
-                ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
+                    queueLock.release()
+                    continue
+                power = packet_data.get("power")
+                voltage = packet_data.get("voltage")
+                current = packet_data.get("current")
+                cumpower = int(packet_data.get("cumpower") / 1000)
+                ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
+                if (len(ml_datum) == 18):
+                  ml_data.append(ml_datum)
             queueLock.release()
             #ML prediction
             if len(ml_data) == 20:
