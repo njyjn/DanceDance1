@@ -1,8 +1,9 @@
 from arduino import listen, init
-
+import time
 
 print("Welcome to debug mode!")
 init()
 while True:
     packet = listen()
-    print(packet)
+    if packet is not None:
+        print(packet)
