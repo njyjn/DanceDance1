@@ -70,9 +70,9 @@ class toMLtoServer(threading.Thread):
                 if packet_data is None:
                     #queueLock.release()
                     continue
-                power = packet_data.get("power")
-                voltage = packet_data.get("voltage")
-                current = packet_data.get("current")
+                power = packet_data.get("power") / 1000
+                voltage = packet_data.get("voltage") / 1000
+                current = packet_data.get("current") / 1000
                 cumpower = int(packet_data.get("cumpower") / 1000)
                 ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
                 if (len(ml_datum) == 18):
