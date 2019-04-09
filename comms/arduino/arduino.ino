@@ -27,8 +27,8 @@
 #define MPU_ADDR 0x68 // I2C address of the MPU-6050
 #define NUM_TASKS 1
 #define DELAY_INIT_HANDSHAKE 100
-#define DELAY_SENSOR_READ 8
-#define DELAY_POWER_READ 100
+#define DELAY_SENSOR_READ 60
+#define DELAY_POWER_READ 1000
 #define DELAY_SEND2RPI 10
 #define RESEND_THRESHOLD 0
 
@@ -123,7 +123,7 @@ void setup() {
     "SensorRead",
     1024, // Stack size
     NULL,
-    2, // priority
+    1, // priority
     NULL
   );
 
@@ -277,12 +277,12 @@ void getSensorData(TSensorData * packet, char sensorId) {
   gY = ((gY / gyroS) * 1000);
   gZ = ((gZ / gyroS) * 1000);
 
-//  Serial.print(aX);  Serial.print(", ");
-//  Serial.print(aY);  Serial.print(", ");
-//  Serial.print(aZ);  Serial.print(", ");
-//  Serial.print(gX);  Serial.print(", ");
-//  Serial.print(gY);  Serial.print(", ");
-//  Serial.print(gZ);  Serial.print("]");
+  Serial.print(aX);  Serial.print(", ");
+  Serial.print(aY);  Serial.print(", ");
+  Serial.print(aZ);  Serial.print(", ");
+  Serial.print(gX);  Serial.print(", ");
+  Serial.print(gY);  Serial.print(", ");
+  Serial.print(gZ);  Serial.print("\n");
 //  if (sensorId != 3) Serial.print(",");
 
   packet->aX = aX;
