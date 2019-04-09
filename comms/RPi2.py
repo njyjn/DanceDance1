@@ -19,7 +19,7 @@ from features_extraction import extract_features
 dataQueue = queue.Queue(90)
 queueLock = threading.Lock()
 labels_dict = {
-    0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
+    0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
 }
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -48,18 +48,19 @@ def normalise(x, minx, maxx):
 def Main_Run():
     
     myThread1 = toMLtoServer()
-    myThread1.start()
-
     myThread2 = listen()
+    input("Press Enter when server is ready...")
+    myThread1.start()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.my_pi = RaspberryPi(ip_addr, port_num)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
+        #my_pi = RaspberryPi(ip_addr, port_num)
         #my_ML = ML()
         danceMove = ""
         power = ""
@@ -72,10 +73,10 @@ class toMLtoServer(threading.Thread):
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
                 #print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = packet_data["cumpower"]
+                power = packet_data.get("power")
+                voltage = packet_data.get("voltage")
+                current = packet_data.get("current")
+                cumpower = packet_data.get("cumpower")
                 ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
             queueLock.release()
             #ML prediction
@@ -109,27 +110,30 @@ class toMLtoServer(threading.Thread):
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
                 with graph.as_default():
                     result_keras = model_keras.predict(test_sample, batch_size=96, verbose=0)
+                    model_keras.reset_states()
                 data_line = extract_features(np.asarray(ml_data))
                 result_int_keras = int(np.argmax(result_keras[0]))
                 danceMove = labels_dict[result_int_keras]
-
-                prediction_knn = model_knn.predict(data_line)
-                prediction_rf = model_rf.predict(data_line)
-                prediction_svm = model_svm.predict(data_line)
+                features = []
+                features.append(data_line)
+                features = np.array(features)
+                prediction_knn = model_knn.predict(features)
+                prediction_rf = model_rf.predict(features)
+                prediction_svm = model_svm.predict(features)
 
                 pred_list = []
-                pred_list.append(prediction_knn[0])
-                pred_list.append(prediction_rf[0])
-                pred_list.append(prediction_svm[0])
+                pred_list.append(labels_dict[prediction_knn[0]-1])
+                pred_list.append(labels_dict[prediction_rf[0]-1])
+                pred_list.append(labels_dict[prediction_svm[0]-1])
                 pred_list.append(danceMove)
-
+                print(pred_list)
                 from collections import Counter
 
                 most_common, num_most_common = Counter(pred_list).most_common(1)[0]
                 if num_most_common >= 3:
                     danceMove = most_common
 
-                data = Data(my_pi.sock)
+                data = Data(self.my_pi.sock)
                 data.sendData(danceMove, power, voltage, current, cumpower)
 
             if len(ml_data) == 90:
@@ -145,9 +149,10 @@ class listen(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        my_Ard.init()
 
     def run(self):
-        my_Ard.init()
+        #my_Ard.init()
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
@@ -175,10 +180,10 @@ class Data():
         self.power = power
         self.cumpower = cumpower
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
-        print("sending over data: " + dataToSend)
+        #print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
-        print('encrypted + encoded data is : ' + str(encryptedData))
+        #print('encrypted + encoded data is : ' + str(encryptedData))
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):

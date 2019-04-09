@@ -141,6 +141,8 @@ def reset():
     port.close()
     port.open()
 
+def clear_buffer():
+    port.reset_input_buffer()
 
 def listen():
     # Process the packets

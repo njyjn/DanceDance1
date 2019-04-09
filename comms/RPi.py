@@ -11,22 +11,24 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from keras.models import load_model
 import numpy as np
+import tensorflow as tf
 
 
 #global variables
-dataQueue = queue.Queue(1000)
+dataQueue = queue.Queue()
 queueLock = threading.Lock()
 labels_dict = {
-    0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
+        0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles', 5:'runningman', 6:'doublepump', 7:'snake', 8:'mermaid', 9:'jamesbond', 10:'logout', 11:'stationary'
 }
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'cnn10movesmodeloverlap.h5')
 model = load_model(model_path)
+graph = tf.get_default_graph()
 n_features = 18
 # reshape data into time steps of sub-sequences
-n_steps, n_length = 4, 15
+n_steps, n_length = 4, 5
 # for i in range(len(test_samples)):
 #     test_samples[i] = test_samples[i].reshape((1, n_steps, n_length, n_features))
 
@@ -37,40 +39,47 @@ def normalise(x, minx, maxx):
 
 
 def Main_Run():
-
+    
     myThread1 = listen()
-    myThread1.start()
-
     myThread2 = toMLtoServer()
+    input("Press ENTER when server is ready...")
+    print("Started!")
+    myThread1.start()
     myThread2.start()
 
 class toMLtoServer(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.my_pi = RaspberryPi(ip_addr, port_num)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
-        #my_ML = ML()
         danceMove = ""
         power = ""
         voltage = ""
         current = ""
         cumpower = ""
         ml_data = []
+        predictions = ["0","1","2"]
+        j=0
         while True:
-            queueLock.acquire()
+            #queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = packet_data["cumpower"]
-                ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
-            queueLock.release()
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line 
+                if packet_data is None:
+                    #queueLock.release()
+                    continue
+                power = packet_data.get("power") / 1000
+                voltage = packet_data.get("voltage") / 1000
+                current = packet_data.get("current") / 1000
+                cumpower = int(packet_data.get("cumpower") / 1000)
+                ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
+                if (len(ml_datum) == 18):
+                  ml_data.append(ml_datum)
+            #queueLock.release()
             #ML prediction
-            if len(ml_data) == 60:
+            if len(ml_data) == 20:
                 for arr in ml_data:
                     for i in range(len(arr)):
                         if i < 3:
@@ -98,33 +107,47 @@ class toMLtoServer(threading.Thread):
                 test_sample = arr_data
                 test_sample = np.array(test_sample)
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
-                print(test_sample.shape)
-                result = model.predict(test_sample, batch_size=96, verbose=0)
+                with graph.as_default():
+                       result = model.predict(test_sample, batch_size=96, verbose=0)
+                       
+                model.reset_states()
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
+                index = j % 3
+                predictions[index] = danceMove
+                j = j + 1
+                print(predictions)
+                if all(prediction==predictions[0] for prediction in predictions):
+                    predictions = ["0","1","2"]
+                    data = Data(self.my_pi.sock)
+                    data.sendData(danceMove, power, voltage, current, cumpower)
+                    #queueLock.acquire()
+                    #dataQueue.queue.clear()
+                    #my_Ard.clear_buffer()
+                    #if dataQueue.empty(): 
+                        #print("queue has been emptied for new window")
+                    #queueLock.release()
                 ml_data = []
-                data = Data(my_pi.sock)
-                data.sendData(danceMove, power, voltage, current, cumpower)
-                queueLock.acquire()
+                my_Ard.clear_buffer()
                 dataQueue.queue.clear()
-                time.sleep(2)
-                queueLock.release()
+                print("data queue has been cleared: " + str(dataQueue.empty()))
 
 
 class listen(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        my_Ard.init()
 
     def run(self):
-        my_Ard.init()
+        my_Ard.clear_buffer()
         while True:
             packet = my_Ard.listen() #packet is in dict format
-            queueLock.acquire()
-            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+            #queueLock.acquire()
+            if packet is not None: #check if queue is full. If full, dont put it inside queue
                 #print("data into queue: " + str(packet))
                 dataQueue.put(packet)
-            queueLock.release()
+            #queueLock.release()
 
 
 
@@ -145,13 +168,14 @@ class Data():
         self.power = power
         self.cumpower = cumpower
         dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
-        print("sending over data: " + dataToSend)
+        print("sending over data: " + str(dataToSend))
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
-        print('encrypted + encoded data is : ' + str(encryptedData))
+        #print('encrypted + encoded data is : ' + str(encryptedData))
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
+        paddedMsg = ""
         extraChar = len(msg) % 16
         if extraChar > 0: #if msg size is under or over 16 char size
             padsize = 16 - extraChar
