@@ -105,10 +105,13 @@ class toMLtoServer(threading.Thread):
                      result = model.predict(test_sample, batch_size=96, verbose=0)
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
+                model.reset_states()
                 ml_data = []
                 print("Dance move predicted : " + danceMove)
                 dataQueue.queue.clear()
                 time.sleep(2)
+                print('queue emptied')
+                print(len(ml_data))
 
 
 class listen(threading.Thread):
