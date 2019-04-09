@@ -6,9 +6,9 @@
 /*
  * Hardware Pins
  */
-#define MPU_1 22
-#define MPU_2 38
-#define MPU_3 52
+#define MPU_1 51
+#define MPU_2 52
+#define MPU_3 53
 
 /*
  * Hardware Constants
