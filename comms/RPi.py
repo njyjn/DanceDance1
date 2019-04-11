@@ -15,15 +15,15 @@ import tensorflow as tf
 
 
 #global variables
-dataQueue = queue.Queue(100)
+dataQueue = queue.Queue()
 queueLock = threading.Lock()
 labels_dict = {
-    0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
+        0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles', 5:'runningman', 6:'doublepump', 7:'snake', 8:'mermaid', 9:'jamesbond', 10:'logout', 11:'stationary'
 }
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'onesecondCVmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'cnn10movesmodeloverlap.h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
@@ -63,19 +63,21 @@ class toMLtoServer(threading.Thread):
         predictions = ["0","1","2"]
         j=0
         while True:
-            queueLock.acquire()
+            #queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line 
                 if packet_data is None:
-                    print("None received")
-                    continue 
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = int(packet_data["cumpower"] / 1000)
-                ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
-            queueLock.release()
+                    #queueLock.release()
+                    continue
+                power = packet_data.get("power") / 1000
+                voltage = packet_data.get("voltage") / 1000
+                current = packet_data.get("current") / 1000
+                cumpower = int(packet_data.get("cumpower") / 1000)
+                ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
+                if (len(ml_datum) == 18):
+                  ml_data.append(ml_datum)
+            #queueLock.release()
             #ML prediction
             if len(ml_data) == 20:
                 for arr in ml_data:
@@ -121,14 +123,15 @@ class toMLtoServer(threading.Thread):
                     data.sendData(danceMove, power, voltage, current, cumpower)
                     #queueLock.acquire()
                     #dataQueue.queue.clear()
-                    time.sleep(1.5)
-                    my_Ard.clear_buffer()
+                    #my_Ard.clear_buffer()
                     #if dataQueue.empty(): 
                         #print("queue has been emptied for new window")
                     #queueLock.release()
                 ml_data = []
+                my_Ard.clear_buffer()
                 dataQueue.queue.clear()
-                print("data queue has been cleared")
+                print("data queue has been cleared: " + str(dataQueue.empty()))
+
 
 class listen(threading.Thread):
 
@@ -140,11 +143,11 @@ class listen(threading.Thread):
         my_Ard.clear_buffer()
         while True:
             packet = my_Ard.listen() #packet is in dict format
-            queueLock.acquire()
-            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+            #queueLock.acquire()
+            if packet is not None: #check if queue is full. If full, dont put it inside queue
                 #print("data into queue: " + str(packet))
                 dataQueue.put(packet)
-            queueLock.release()
+            #queueLock.release()
 
 
 
