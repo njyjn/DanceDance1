@@ -23,12 +23,12 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'cnn10movesmodeloverlap.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'cnnlstmmodel16.h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
 # reshape data into time steps of sub-sequences
-n_steps, n_length = 4, 5
+n_steps, n_length = 4, 4
 # for i in range(len(test_samples)):
 #     test_samples[i] = test_samples[i].reshape((1, n_steps, n_length, n_features))
 
@@ -60,7 +60,7 @@ class toMLtoServer(threading.Thread):
         current = ""
         cumpower = ""
         ml_data = []
-        predictions = ["0","1","2"]
+        predictions = ["0","1"]
         j=0
         while True:
             #queueLock.acquire()
@@ -79,7 +79,7 @@ class toMLtoServer(threading.Thread):
                   ml_data.append(ml_datum)
             #queueLock.release()
             #ML prediction
-            if len(ml_data) == 20:
+            if len(ml_data) == 16:
                 for arr in ml_data:
                     for i in range(len(arr)):
                         if i < 3:
@@ -113,14 +113,15 @@ class toMLtoServer(threading.Thread):
                 model.reset_states()
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
-                index = j % 3
+                index = j % 2
                 predictions[index] = danceMove
                 j = j + 1
                 print(predictions)
                 if all(prediction==predictions[0] for prediction in predictions):
-                    predictions = ["0","1","2"]
+                    predictions = ["0","1"]
                     data = Data(self.my_pi.sock)
                     data.sendData(danceMove, power, voltage, current, cumpower)
+                    time.sleep(0.75)
                     #queueLock.acquire()
                     #dataQueue.queue.clear()
                     #my_Ard.clear_buffer()
