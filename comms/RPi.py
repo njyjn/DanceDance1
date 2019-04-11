@@ -73,7 +73,7 @@ class toMLtoServer(threading.Thread):
                 power = packet_data.get("power") / 1000
                 voltage = packet_data.get("voltage") / 1000
                 current = packet_data.get("current") / 1000
-                cumpower = int(packet_data.get("cumpower") / 1000)
+                cumpower = int(packet_data.get("cumpower")) / 1000000.0 * 3600 # convert from uJ to Wh
                 ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
                 if (len(ml_datum) == 18):
                   ml_data.append(ml_datum)
