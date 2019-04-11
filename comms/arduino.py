@@ -11,6 +11,7 @@ PACKET_CODE_HELLO = 2
 PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
+PACKET_CODE_RESET = 6
 
 port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
@@ -119,9 +120,9 @@ def handshake_init():
                 handshake_status = -1
             elif response.get('packet_code') == PACKET_CODE_DATA_RESPONSE:
                 print("Arduino was in the midst of transmission. Reconnecting...")
-                # Ack to Arduino
-                send_packet(PACKET_CODE_ACK)
-                print("Sent ACK to RPi. Connection reestablished!")
+                # Reset to Arduino
+                send_packet(PACKET_CODE_RESET)
+                print("Sent RESET to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
             print(str(e))
