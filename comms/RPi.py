@@ -181,6 +181,8 @@ class Data():
         if extraChar > 0: #if msg size is under or over 16 char size
             padsize = 16 - extraChar
             paddedMsg = msg + (' ' * padsize)
+        else:
+            paddedMsg = msg
         return paddedMsg
 
     def encrypt(self, msg):
