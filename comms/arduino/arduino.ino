@@ -116,7 +116,7 @@ void setup() {
     "SendToRpi",
     1024, // Stack size
     NULL,
-    3, // priority
+    2, // priority
     NULL
   );
 
@@ -134,7 +134,7 @@ void setup() {
     "PowerRead",
     1024, // Stack size
     NULL,
-    2, // priority
+    3, // priority
     NULL
   );
 }
