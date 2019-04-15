@@ -70,7 +70,7 @@ struct TPowerData {
   unsigned short mV;
   unsigned short mA;
   unsigned short mW;
-  unsigned long uJ;
+  unsigned long uJ; //Wh
 };
 
 struct TJZONPacket {
@@ -327,7 +327,7 @@ void PowerRead(void *pvParameters)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
     power = current * voltage;
-    cumpower += power * (currentTime - last_elapsed);
+    cumpower += power * ((currentTime - last_elapsed)/(1000.0 * 3600.0));
 //    Serial.print("Current: "); Serial.print(currentValue); Serial.println(current);
 //    Serial.print("Voltage: "); Serial.print(voltageValue); Serial.println(voltage);
 //    Serial.print("Cumpower: "); Serial.println(cumpower);
@@ -337,7 +337,7 @@ void PowerRead(void *pvParameters)
     powerData.mV = (unsigned short)(voltage*1000);
     powerData.mA = (unsigned short)(current*1000);
     powerData.mW = (unsigned short)(power*1000);
-    powerData.uJ = (unsigned long)(cumpower*1000);
+    powerData.uJ = (unsigned long)(cumpower*1000000);
     // Get power readings from queue
     if (xSemaphoreTake(powerSemaphore, 3)) {
       xQueueSend(powerQueue, &powerData, 3);
