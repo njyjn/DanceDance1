@@ -70,7 +70,7 @@ struct TPowerData {
   unsigned short mV;
   unsigned short mA;
   unsigned short mW;
-  unsigned long Wh;
+  unsigned long uJ; //Wh
 };
 
 struct TJZONPacket {
@@ -337,7 +337,7 @@ void PowerRead(void *pvParameters)
     powerData.mV = (unsigned short)(voltage*1000);
     powerData.mA = (unsigned short)(current*1000);
     powerData.mW = (unsigned short)(power*1000);
-    powerData.Wh = (unsigned long)(cumpower);
+    powerData.uJ = (unsigned long)(cumpower*1000000);
     // Get power readings from queue
     if (xSemaphoreTake(powerSemaphore, 3)) {
       xQueueSend(powerQueue, &powerData, 3);
