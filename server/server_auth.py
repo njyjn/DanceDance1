@@ -17,7 +17,7 @@ class server_auth:
         cipher = AES.new(secret_key,AES.MODE_CBC,iv)
         decryptedText = cipher.decrypt(decodedMSG[16:]).strip()
         decryptedTextStr = decryptedText.decode('utf8')
-        decryptedTextStr1 = decryptedTextStr[decryptedTextStr.find('#'):] 
+        decryptedTextStr1 = decryptedTextStr[decryptedTextStr.find('#'):]
         decryptedTextFinal = bytes(decryptedTextStr1[1:],'utf8').decode('utf8')
         action = decryptedTextFinal.split('|')[0]
         voltage = decryptedTextFinal.split('|')[1]
