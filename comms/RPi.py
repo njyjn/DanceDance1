@@ -39,7 +39,7 @@ def normalise(x, minx, maxx):
 
 
 def Main_Run():
-    
+
     myThread1 = listen()
     myThread2 = toMLtoServer()
     input("Press ENTER when server is ready...")
@@ -66,14 +66,14 @@ class toMLtoServer(threading.Thread):
             #queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line 
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
                 if packet_data is None:
                     #queueLock.release()
                     continue
                 power = packet_data.get("power") / 1000
                 voltage = packet_data.get("voltage") / 1000
                 current = packet_data.get("current") / 1000
-                cumpower = int(packet_data.get("cumpower")) / 1000000.0 * 3600 # convert from uJ to Wh
+                cumpower = int(packet_data.get("cumpower")) / 1000
                 ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
                 if (len(ml_datum) == 18):
                   ml_data.append(ml_datum)
@@ -109,7 +109,7 @@ class toMLtoServer(threading.Thread):
                 test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
                 with graph.as_default():
                        result = model.predict(test_sample, batch_size=96, verbose=0)
-                       
+
                 model.reset_states()
                 result_int = int(np.argmax(result[0]))
                 danceMove = labels_dict[result_int]
@@ -125,7 +125,7 @@ class toMLtoServer(threading.Thread):
                     #queueLock.acquire()
                     #dataQueue.queue.clear()
                     #my_Ard.clear_buffer()
-                    #if dataQueue.empty(): 
+                    #if dataQueue.empty():
                         #print("queue has been emptied for new window")
                     #queueLock.release()
                 ml_data = []
