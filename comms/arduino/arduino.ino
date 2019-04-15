@@ -203,7 +203,6 @@ void SendToRpi(void *pvParameters)
           Serial.println("Reset");
           reset_cumpower = 1;
           acknowledged = 1;
-          return;
         }
       }
       resend_count++;
