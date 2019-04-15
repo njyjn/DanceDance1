@@ -54,6 +54,8 @@ SemaphoreHandle_t dataSemaphore;
 QueueHandle_t powerQueue;
 SemaphoreHandle_t powerSemaphore;
 
+int reset_cumpower;
+
 struct TSensorData {
   char sensorId;
   short aX;
@@ -114,7 +116,7 @@ void setup() {
     "SendToRpi",
     1024, // Stack size
     NULL,
-    3, // priority
+    2, // priority
     NULL
   );
 
@@ -132,7 +134,7 @@ void setup() {
     "PowerRead",
     1024, // Stack size
     NULL,
-    2, // priority
+    3, // priority
     NULL
   );
 }
@@ -198,9 +200,9 @@ void SendToRpi(void *pvParameters)
         } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_NACK) {
           Serial.println("Resend!");
         } else if (bufferAck[MESSAGE_PACKET_CODE_INDEX_NO_DATA] == PACKET_CODE_RESET) {
-//          initI2C(1);
-          Serial.println("Reset I2C!");
-          return;
+          Serial.println("Reset");
+          reset_cumpower = 1;
+          acknowledged = 1;
         }
       }
       resend_count++;
@@ -307,6 +309,10 @@ void PowerRead(void *pvParameters)
   unsigned long last_elapsed = 0;
 
   for (;;) {
+    if (reset_cumpower == 1) {
+      cumpower = 0;
+      reset_cumpower = 0;
+    }
     currentTime = millis();
     // Read current & voltage values from circuit board
     currentValue = analogRead(CURRENT_PIN);
