@@ -23,7 +23,7 @@ labels_dict = {
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'cnnlstmmodel16.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'cnnlstmmodel16(2mins).h5')
 model = load_model(model_path)
 graph = tf.get_default_graph()
 n_features = 18
@@ -121,7 +121,7 @@ class toMLtoServer(threading.Thread):
                     predictions = ["0","1"]
                     data = Data(self.my_pi.sock)
                     data.sendData(danceMove, power, voltage, current, cumpower)
-                    time.sleep(0.75)
+                    time.sleep(1)
                     #queueLock.acquire()
                     #dataQueue.queue.clear()
                     #my_Ard.clear_buffer()
