@@ -223,9 +223,9 @@ void SensorRead(void *pvParameters)
       sensorData[i] = sensorDatum;
     }
 //    Serial.println("Sensors sampled!");
-    if (xSemaphoreTake(dataSemaphore, 3)) {
+    if (xSemaphoreTake(dataSemaphore, 5)) {
 //      Serial.println("Data semaphore obtained!");
-      xQueueSend(dataQueue, &sensorData, 3);
+      xQueueSend(dataQueue, &sensorData, 5);
 //      Serial.println("Sent to data queue!");
       xSemaphoreGive(dataSemaphore);
     }
@@ -327,7 +327,7 @@ void PowerRead(void *pvParameters)
     current = currentValue / (10 * RS);
     voltage = voltageValue * 2;
     power = current * voltage;
-    cumpower += power * ((currentTime - last_elapsed)/(1000.0 * 3600.0));
+    cumpower += power * (currentTime - last_elapsed)/(1000.0 * 3600.0);
 //    Serial.print("Current: "); Serial.print(currentValue); Serial.println(current);
 //    Serial.print("Voltage: "); Serial.print(voltageValue); Serial.println(voltage);
 //    Serial.print("Cumpower: "); Serial.println(cumpower);
