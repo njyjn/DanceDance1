@@ -201,21 +201,23 @@ void getSensorData(TSensorData * packet, char sensorId) {
   int16_t gZ = 6*sensorId;
   packet->sensorId = sensorId;
   if (sensorId == 1) {
-    digitalWrite(MPU_1, LOW);
     digitalWrite(MPU_2, HIGH);
     digitalWrite(MPU_3, HIGH);
+    vTaskDelay(1);
+    digitalWrite(MPU_1, LOW);
   }
   if (sensorId == 2) {
     digitalWrite(MPU_1,HIGH);
-    digitalWrite(MPU_2,LOW);
     digitalWrite(MPU_3,HIGH);
+    vTaskDelay(1);
+    digitalWrite(MPU_2,LOW);
   }
   if (sensorId == 3) {
     digitalWrite(MPU_1,HIGH);
     digitalWrite(MPU_2,HIGH);
+    vTaskDelay(1);
     digitalWrite(MPU_3,LOW);
   }
-
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
   if (Wire.endTransmission(false) == 0) {
