@@ -145,8 +145,8 @@ void SendToRpi(void *pvParameters)
     msg.packetCode = PACKET_CODE_DATA_RESPONSE;
     msg.len = NUM_SENSORS;
     // Get sensor readings from queue
-    if (xSemaphoreTake(dataSemaphore, 5)) {
-      if (xQueueReceive(dataQueue, &sensorData, 5)) {
+    if (xSemaphoreTake(dataSemaphore, 3)) {
+      if (xQueueReceive(dataQueue, &sensorData, 3)) {
         for (int i=0;i<NUM_SENSORS;i++) {
           msg.sensorData[i] = sensorData[i];
         }
@@ -189,8 +189,8 @@ void SensorRead(void *pvParameters)
       getSensorData(&sensorDatum,i+1);
       sensorData[i] = sensorDatum;
     }
-    if (xSemaphoreTake(dataSemaphore, 5)) {
-      xQueueSend(dataQueue, &sensorData, 5);
+    if (xSemaphoreTake(dataSemaphore, 3)) {
+      xQueueSend(dataQueue, &sensorData, 3);
       xSemaphoreGive(dataSemaphore);
     }
     vTaskDelayUntil(&xLastWakeTime,DELAY_SENSOR_READ/portTICK_PERIOD_MS);
