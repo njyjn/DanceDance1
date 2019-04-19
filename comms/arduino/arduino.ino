@@ -85,6 +85,11 @@ void setup() {
   Serial.begin(115200);
   Serial1.begin(115200);
   initI2C();
+  for (int i = 0; i <= 50; i++){
+    if (i < 18 || i > 21) {
+      pinMode(i, INPUT_PULLUP);
+    }
+  }
   dataQueue = xQueueCreate(80, sizeof( struct TSensorData[3] ));
   if(dataQueue == NULL){
   }
