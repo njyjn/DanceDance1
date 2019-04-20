@@ -131,7 +131,7 @@ def handshake_init():
 def init():
     # Initial setup message to console
     print("Hello world! Awaiting initial handshake from Arduino...")
-    port.flushInput()
+    port.reset_input_buffer()
     # Initial handshake with RPi
     handshake_init()
 

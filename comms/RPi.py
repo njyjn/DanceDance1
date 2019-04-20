@@ -5,75 +5,73 @@ import base64
 import time
 import threading
 import os
-import arduino as my_Ard
-import csv
+#import arduino as my_Ard 
 from Crypto import Random
 from Crypto.Cipher import AES
 
 
 #global variables
-dataQueue = queue.Queue(1000)
+dataQueue = queue.Queue(1)
 queueLock = threading.Lock()
 
 
 def Main_Run():
     
-    myThread1 = listen()
+    myThread1 = toMLtoServer()
+ #   myThread2 = listen()
+    input("Press ENTER when the server is ready....")
     myThread1.start()
-
-    myThread2 = toMLtoServer()
-    myThread2.start()
+  #  myThread2.start()
 
 class toMLtoServer(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.my_pi = RaspberryPi(ip_addr, port_num)
 
     def run(self):
-        my_pi = RaspberryPi(ip_addr, port_num)
-        my_ML = ML()
+        print("inside RPi thread")
         danceMove = ""
-        power = ""
-        voltage = ""
-        current = ""
-        cumpower = ""
+        power = "12345"
+        voltage = "12345"
+        current = "12345"
+        cumpower = "1234567"
         while True:
-            queueLock.acquire()
+            #queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
-                packet_data = dataQueue.get()
+                #packet_data = dataQueue.get()
+                print("there is data inside the queue")
                 #print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                power = packet_data["power"]
-                voltage = packet_data["voltage"]
-                current = packet_data["current"]
-                cumpower = packet_data["cumpower"]
-                danceMove = my_ML.give(packet_data)
-            queueLock.release()
-            #danceMove = my_ML.give(packet_data["01"] + packet_data["02"] + packet_data["03"]) #dummy class for sending
-            data = Data(my_pi.sock)
-            data.sendData(danceMove, power, voltage, current, cumpower)
-            #time.sleep(2)
-
+                #power = packet_data["power"]
+                #voltage = packet_data["voltage"]
+                #current = packet_data["current"]
+                #cumpower = packet_data["cumpower"]
+                #danceMove = my_ML.give(packet_data)
+            #queueLock.release()
+            danceMove = sys.stdin.readline().strip()
+            if danceMove is not None : 
+                data = Data(self.my_pi.sock)
+                data.sendData(danceMove, power, voltage, current, cumpower)
+                dataQueue.queue.clear()
+            
 
 class listen(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        my_Ard.init()
+        print("connected to arduino")
 
     def run(self):
-        my_Ard.init()
+        print("inside Arduino thread")
         while True:
             packet = my_Ard.listen() #packet is in dict format
-            queueLock.acquire()
-            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+            #queueLock.acquire()
+            #if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
                 #print("data into queue: " + str(packet))
-                dataQueue.put(packet)
-            queueLock.release()
-
-
-class ML():
-    #dummy class for ML module
-    def give(self, data):
-        return "cowboy"
+                #print("putting it inside queue")
+                #dataQueue.put(packet)
+            #queueLock.release()
 
 
 class Data():
@@ -90,7 +88,7 @@ class Data():
         print("sending over data: " + dataToSend)
         paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
         encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
-        print('encrypted + encoded data is : ' + str(encryptedData))
+#       print('encrypted + encoded data is : ' + str(encryptedData))
         self.sock.sendall(encryptedData)
 
     def pad(self,msg):
@@ -98,6 +96,8 @@ class Data():
         if extraChar > 0: #if msg size is under or over 16 char size
             padsize = 16 - extraChar
             paddedMsg = msg + (' ' * padsize)
+        else:
+            paddedMsg = msg
         return paddedMsg
 
     def encrypt(self, msg):
