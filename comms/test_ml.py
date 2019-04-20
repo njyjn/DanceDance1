@@ -9,38 +9,42 @@ import arduino as my_Ard
 import csv
 from Crypto import Random
 from Crypto.Cipher import AES
+from keras.models import load_model
+import numpy as np
+import tensorflow as tf
 
 
 #global variables
 dataQueue = queue.Queue(1000)
 queueLock = threading.Lock()
-workingCSV = ""
+labels_dict = {
+    0: 'hunch', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles'
+}
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+model_path = os.path.join(PROJECT_DIR, 'models', 'firstmodel.h5')
+model = load_model(model_path)
+graph = tf.get_default_graph()
+n_features = 18
+# reshape data into time steps of sub-sequences
+n_steps, n_length = 4, 15
+# for i in range(len(test_samples)):
+#     test_samples[i] = test_samples[i].reshape((1, n_steps, n_length, n_features))
+
+
+def normalise(x, minx, maxx):
+    new_x = 2*(x-minx)/(maxx-minx) - 1
+    return new_x
+
 
 def Main_Run():
-    global workingCSV
-    workingCSV = createCSV()
+    print("Ready to go!")
     myThread1 = listen()
     myThread1.start()
 
     myThread2 = toMLtoServer()
     myThread2.start()
-
-def createCSV():
-    data_filename = time.strftime('%Y-%m-%dT%H%M%S', time.localtime()) + '.csv'
-    open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'w+')
-    print('Created file %s in main dir' % (data_filename))
-    return data_filename
-
-def appendToCSV(packet_data, data_filename):
-    ML_data = [
-    #    [] ,
-    #   [] ,
-# []
-    ]            
-    
-    with open(os.path.join(os.pardir, 'data', 'transient', data_filename), 'a', newline = '') as datafile:
-        writer = csv.writer(datafile, delimiter = " ")
-        writer.writerow(packet_data["01"]+packet_data["02"]+packet_data["03"])
 
 class toMLtoServer(threading.Thread):
 
@@ -48,29 +52,66 @@ class toMLtoServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-#        my_pi = RaspberryPi(ip_addr, port_num)
- #       my_ML = ML()
-  #      danceMove = ""
-        #power = ""
-        #voltage = ""
-        #current = ""
-        #cumpower = ""
+        #my_pi = RaspberryPi(ip_addr, port_num)
+        #my_ML = ML()
+        danceMove = ""
+        power = ""
+        voltage = ""
+        current = ""
+        cumpower = ""
+        ml_data = []
         while True:
             queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                print("data from queue: " + str(packet_data)) #check for multithreading using this line
-                #power = packet_data["power"]
-                #voltage = packet_data["voltage"]
-                #current = packet_data["current"]
-                #cumpower = packet_data["cumpower"]
-                #danceMove = my_ML.give(packet_data)
-                appendToCSV(packet_data, workingCSV)
+                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
+                power = packet_data["power"]
+                voltage = packet_data["voltage"]
+                current = packet_data["current"]
+                cumpower = packet_data["cumpower"]
+                ml_data.append(packet_data["01"] + packet_data["02"] + packet_data["03"])
             queueLock.release()
-   #         danceMove = my_ML.give(packet_data) #dummy class for sending
-    #        data = Data(danceMove, my_pi.sock)
-     #       data.sendData()
-            #time.sleep(2)
+            #ML prediction
+            if len(ml_data) == 60:
+                for arr in ml_data:
+                    for i in range(len(arr)):
+                        if i < 3:
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(3, 6):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(6, 9):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(9, 12):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                        elif i in range(12, 15):
+                            arr[i] = normalise(arr[i], -2000, 2000)
+                        elif i in range(15, 18):
+                            arr[i] = normalise(arr[i], -250000, 250000)
+                arr_data = []
+                for array in ml_data:
+                    arr_raw = []
+                    arr_raw += [
+                        array[0], array[1], array[2], array[6], array[7], array[8], array[12], array[13], array[14],
+                        array[3],
+                        array[4], array[5], array[9], array[10], array[11], array[15], array[16], array[17]
+                    ]
+                    arr_data.append(arr_raw)
+
+                test_sample = arr_data
+                test_sample = np.array(test_sample)
+                test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
+                print(test_sample.shape)
+                with graph.as_default():
+                     result = model.predict(test_sample, batch_size=96, verbose=0)
+                result_int = int(np.argmax(result[0]))
+                danceMove = labels_dict[result_int]
+                model.reset_states()
+                ml_data = []
+                print("Dance move predicted : " + danceMove)
+                dataQueue.queue.clear()
+                time.sleep(2)
+                print('queue emptied')
+                print(len(ml_data))
 
 
 class listen(threading.Thread):
@@ -83,64 +124,12 @@ class listen(threading.Thread):
         while True:
             packet = my_Ard.listen() #packet is in dict format
             queueLock.acquire()
-            if not dataQueue.full() and packet is not None: #check if queue is full. If full, dont put it inside queue
-                print("data into queue: " + str(packet))
+            if not dataQueue.full(): #check if queue is full. If full, dont put it inside queue
+                #print("data into queue: " + str(packet))
                 dataQueue.put(packet)
-                print("queue size: " + str(dataQueue.full()))
             queueLock.release()
 
 
-class ML():
-    #dummy class for ML module
-    def give(self, data):
-        return "cowboy"
-
-
-class Data():
-    def __init__(self, move, sock):
-        self.move = move
-        self.sock = sock
-
-    def sendData(self):
-        self.current = 20
-        self.voltage = 20
-        self.power = 20
-        self.cumpower = 20
-        dataToSend = ("#" + self.move + "|" + str(self.voltage) + "|" + str(self.current) + "|" + str(self.power) + "|" + str(self.cumpower) + "|")
-        print("sending over data: " + dataToSend)
-        paddedMsg = self.pad(dataToSend) #apply padding to pad message to multiple of 16
-        encryptedData =self.encrypt(paddedMsg) #encrypt and encode in base64
-        print('encrypted + encoded data is : ' + str(encryptedData))
-        # encodedData = encryptedData.encode('utf8')
-        self.sock.sendall(encryptedData)
-
-    def pad(self,msg):
-        extraChar = len(msg) % 16
-        if extraChar > 0: #if msg size is under or over 16 char size
-            padsize = 16 - extraChar
-            paddedMsg = msg + (' ' * padsize)
-        return paddedMsg
-
-    def encrypt(self, msg):
-        secret_key = "1234512345123451" #dummy key for testing
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(secret_key,AES.MODE_CBC,iv)
-        return base64.b64encode(iv + cipher.encrypt(msg)) #encrypted msg in octets(bytes) is transformed into sets of sextets. sextet value is used to determine the letter in Base64 table
-
-
-class RaspberryPi():
-
-    def __init__(self, server_add, server_port):
-        self.server_add = server_add #address of the server (PC acting as server)
-        self.server_port = int(server_port) #port of the server(PC acting as server)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #creates the socket object
-        self.connect()
-
-    def connect(self):
-        server_fullAdd = (self.server_add, self.server_port)
-        self.sock.connect(server_fullAdd) #connect to server socket
-        print("connected to server websocket!")
-
-
 if __name__ == '__main__':
+
     Main_Run()

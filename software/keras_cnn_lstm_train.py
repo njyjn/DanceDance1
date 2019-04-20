@@ -37,7 +37,7 @@ def get_model(trainX, trainy, model_path=None):
     n_timesteps, n_features, n_outputs = trainX.shape[1], trainX.shape[2], trainy.shape[1]
 
     # reshape data into time steps of sub-sequences
-    n_steps, n_length = 4, 32
+    n_steps, n_length = 4, 15
     trainX = trainX.reshape((trainX.shape[0], n_steps, n_length, n_features))
     if os.path.isfile(model_path):
         model = load_model(model_path)
@@ -79,12 +79,18 @@ def load_group(filenames, prefix=''):
 # load a dataset group, such as train or test
 def load_dataset_group(group, prefix=''):
     filepath = group + '\\'
-    # load all 6 files as a single array
+    # load all 18 files as a single array
     filenames = list()
     # acceleration
-    filenames += ['acc_x.csv', 'acc_y.csv', 'acc_z.csv']
+    filenames += [
+        'acc_x1.csv', 'acc_y1.csv', 'acc_z1.csv', 'acc_x2.csv', 'acc_y2.csv', 'acc_z2.csv', 'acc_x3.csv', 'acc_y3.csv',
+        'acc_z3.csv'
+    ]
     # body gyroscope
-    filenames += ['gyro_x.csv', 'gyro_y.csv', 'gyro_z.csv']
+    filenames += [
+        'gyro_x1.csv', 'gyro_y1.csv', 'gyro_z1.csv', 'gyro_x2.csv', 'gyro_y2.csv', 'gyro_z2.csv', 'gyro_x3.csv',
+        'gyro_y3.csv', 'gyro_z3.csv'
+    ]
     # load input data
     X = load_group(filenames, filepath)
     # load class output
@@ -108,7 +114,7 @@ def evaluate_model(model, trainX, trainy, testX, testy):
     n_timesteps, n_features, n_outputs = trainX.shape[1], trainX.shape[2], trainy.shape[1]
 
     # reshape data into time steps of sub-sequences
-    n_steps, n_length = 4, 32
+    n_steps, n_length = 4, 15
     testX = testX.reshape((testX.shape[0], n_steps, n_length, n_features))
 
     # evaluate model
@@ -122,7 +128,7 @@ def train_model(trainX, trainy):
     n_timesteps, n_features, n_outputs = trainX.shape[1], trainX.shape[2], trainy.shape[1]
 
     # reshape data into time steps of sub-sequences
-    n_steps, n_length = 4, 32
+    n_steps, n_length = 4, 15
     trainX = trainX.reshape((trainX.shape[0], n_steps, n_length, n_features))
     # define model
     model = Sequential()
@@ -165,13 +171,16 @@ def get_generator_values(X_train_cv, y_train_cv, batch):
 
 
 data_x, data_y = load_dataset()
+print(len(data_x[0][0]))
+# trainX, testX, trainY, testY = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
 trainX, testX, trainY, testY = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+
 trainY = to_categorical(trainY)
 testY = to_categorical(testY)
 print(trainX.shape, trainY.shape)
 print(testX.shape, testY.shape)
 
-## Training normal
+# # Training normal
 # model = train_model(trainX, trainY)
 # model_dir = os.path.join(PROJECT_DIR, 'models')
 # model_filepath = os.path.join(model_dir, 'firstmodel.h5')
@@ -182,8 +191,8 @@ print(testX.shape, testY.shape)
 # score = score * 100.0
 # print('%.3f' % score)
 
-##Training with Cross Validation of kFold = 5
-# Instantiate the cross validator
+# #Training with Cross Validation of kFold = 5
+# # Instantiate the cross validator
 # kfold_splits = 5
 # seed = 7
 # skf = StratifiedKFold(n_splits=kfold_splits, shuffle=True, random_state=seed)
@@ -193,14 +202,14 @@ print(testX.shape, testY.shape)
 #     X_valid_cv = trainX[val_idx]
 #     y_valid_cv = trainY[val_idx]
 #     print(len(X_train_cv))
-#     model_path = os.path.join(PROJECT_DIR, 'models', "fifthmodel.h5")
+#     model_path = os.path.join(PROJECT_DIR, 'models', "secondmodel.h5")
 #     callbacks = get_callbacks(name_weights=model_path, patience_lr=10)
 #       # define model
 #     verbose, epochs, batch_size = 2, 40, 96
 #     n_timesteps, n_features, n_outputs = X_train_cv.shape[1], X_train_cv.shape[2], y_train_cv.shape[1]
 #
 #     # reshape data into time steps of sub-sequences
-#     n_steps, n_length = 4, 32
+#     n_steps, n_length = 4, 15
 #     X_train_cv = X_train_cv.reshape(X_train_cv.shape[0], n_steps, n_length, n_features)
 #     X_valid_cv = X_valid_cv.reshape(X_valid_cv.shape[0], n_steps, n_length, n_features)
 #     generator = get_generator_values(X_train_cv, y_train_cv, batch_size)
@@ -218,13 +227,15 @@ print(testX.shape, testY.shape)
 #     print(model.evaluate(X_valid_cv, y_valid_cv))
 
 
-model_path = os.path.join(PROJECT_DIR, 'models', 'fifthmodel.h5')
+model_path = os.path.join(PROJECT_DIR, 'models', 'secondmodel.h5')
 model = load_model(model_path)
+print(len(testX))
+print(testX[0])
 
-n_features = 6
+n_features = 18
 # reshape data into time steps of sub-sequences
-n_steps, n_length = 4, 32
-test_samples = testX.reshape(2438, n_steps, n_length, n_features)
+n_steps, n_length = 4, 15
+test_samples = testX.reshape(410, n_steps, n_length, n_features)
 results = model.predict(test_samples, batch_size=96, verbose=0)
 print(len(results))
 score = evaluate_model(model, trainX, trainY, testX, testY)

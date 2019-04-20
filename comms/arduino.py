@@ -11,6 +11,7 @@ PACKET_CODE_HELLO = 2
 PACKET_CODE_READ = 3
 PACKET_CODE_WRITE = 4
 PACKET_CODE_DATA_RESPONSE = 5
+PACKET_CODE_RESET = 6
 
 port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=10)
 
@@ -101,27 +102,27 @@ def handshake_init():
                 print("Arduino says HELLO...")
                 # Ack to Arduino
                 send_packet(PACKET_CODE_ACK)
-                print("Sent HELLO ACK to RPi")
+                print("Sent HELLO ACK to Arduino")
                 handshake_status = 1
             # First Ack from Arduino
             elif handshake_status == 1 and response.get('packet_code') == PACKET_CODE_ACK:
                 print("Arduino says ACK")
                 # Hello to Arduino
                 send_packet(PACKET_CODE_HELLO)
-                print("Sent HELLO to RPi")
+                print("Sent HELLO to Arduino")
                 handshake_status = 2
             # Last Ack from Arduino
             elif handshake_status == 2 and response.get('packet_code') == PACKET_CODE_ACK:
-                print("Arduino says ACK")
+                print("Arduino says HELLO ACK")
                 # Ack to Arduino
                 send_packet(PACKET_CODE_ACK)
-                print("Sent ACK to RPi. Handshake complete!")
+                print("Sent ACK to Arduino. Handshake complete!")
                 handshake_status = -1
             elif response.get('packet_code') == PACKET_CODE_DATA_RESPONSE:
                 print("Arduino was in the midst of transmission. Reconnecting...")
-                # Ack to Arduino
-                send_packet(PACKET_CODE_ACK)
-                print("Sent ACK to RPi. Connection reestablished!")
+                # Reset to Arduino
+                send_packet(PACKET_CODE_RESET)
+                print("Sent RESET to RPi. Connection reestablished!")
                 handshake_status = -1
         except Exception as e:
             print(str(e))
@@ -141,6 +142,8 @@ def reset():
     port.close()
     port.open()
 
+def clear_buffer():
+    port.reset_input_buffer()
 
 def listen():
     # Process the packets
