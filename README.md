@@ -30,9 +30,9 @@
 The "Ultimate" move is simply a vertical, oscillating movement of the left hand above the head, with the right hand (palm-facing up) at the abdomen as though the dancer had stabbed themself.
 
 ## Communication Protocol
-Communication protocol is JZON1.4. Packets follow the following convention:
+Communication protocol is JZON1.2. Packets follow the following convention:
 ```
-[57][PACKET_CODE][DATA]
+[57][PACKET_CODE][LEN][DATA]
 ```
 and are responded to with either an `ACK`, `NACK`, or `RESET`.
 
