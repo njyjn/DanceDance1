@@ -5,8 +5,7 @@ import base64
 import time
 import threading
 import os
-import arduino as my_Ard
-import csv
+import arduino as my_Ard 
 from Crypto import Random
 from Crypto.Cipher import AES
 from keras.models import load_model
@@ -16,6 +15,7 @@ import tensorflow as tf
 
 #global variables
 dataQueue = queue.Queue()
+
 queueLock = threading.Lock()
 labels_dict = {
         0: 'hunchback', 1: 'cowboy', 2: 'crab', 3: 'chicken', 4: 'raffles', 5:'runningman', 6:'doublepump', 7:'snake', 8:'mermaid', 9:'jamesbond', 10:'logout', 11:'stationary'
@@ -52,6 +52,7 @@ class toMLtoServer(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.my_pi = RaspberryPi(ip_addr, port_num)
+        self.ML = ML()
 
     def run(self):
         danceMove = ""
@@ -63,76 +64,31 @@ class toMLtoServer(threading.Thread):
         predictions = ["0","1"]
         j=0
         while True:
-            #queueLock.acquire()
             if not dataQueue.empty(): #check if queue is empty or not. If empty, dont try to take from queue
                 packet_data = dataQueue.get()
-                #print("data from queue: " + str(packet_data)) #check for multithreading using this line
                 if packet_data is None:
-                    #queueLock.release()
                     continue
                 power = packet_data.get("power") / 1000
                 voltage = packet_data.get("voltage") / 1000
                 current = packet_data.get("current") / 1000
                 cumpower = int(packet_data.get("cumpower")) / 1000000
                 ml_datum = (packet_data.get("01", []) + packet_data.get("02", []) + packet_data.get("03", []))
-                if (len(ml_datum) == 18):
-                  ml_data.append(ml_datum)
-            #queueLock.release()
-            #ML prediction
+                if (len(ml_datum) == 18): # only append if there 18 data points. Data points from Arduino < 16
+                    ml_data.append(ml_datum)
             if len(ml_data) == 16:
-                for arr in ml_data:
-                    for i in range(len(arr)):
-                        if i < 3:
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(3, 6):
-                            arr[i] = normalise(arr[i], -250000, 250000)
-                        elif i in range(6, 9):
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(9, 12):
-                            arr[i] = normalise(arr[i], -250000, 250000)
-                        elif i in range(12, 15):
-                            arr[i] = normalise(arr[i], -2000, 2000)
-                        elif i in range(15, 18):
-                            arr[i] = normalise(arr[i], -250000, 250000)
-                arr_data = []
-                for array in ml_data:
-                    arr_raw = []
-                    arr_raw += [
-                        array[0], array[1], array[2], array[6], array[7], array[8], array[12], array[13], array[14],
-                        array[3],
-                        array[4], array[5], array[9], array[10], array[11], array[15], array[16], array[17]
-                    ]
-                    arr_data.append(arr_raw)
-
-                test_sample = arr_data
-                test_sample = np.array(test_sample)
-                test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
-                with graph.as_default():
-                       result = model.predict(test_sample, batch_size=96, verbose=0)
-
-                model.reset_states()
-                result_int = int(np.argmax(result[0]))
-                danceMove = labels_dict[result_int]
+                arr_data = self.ML.processData(ml_data)
+                danceMove = self.ML.predict_move(arr_data)
                 index = j % 2
                 predictions[index] = danceMove
                 j = j + 1
-                print(predictions)
                 if all(prediction==predictions[0] for prediction in predictions):
-                    predictions = ["0","1"]
+                    predictions = ["0","1"] #reset the window
                     data = Data(self.my_pi.sock)
                     data.sendData(danceMove, power, voltage, current, cumpower)
-                    time.sleep(1)
-                    #queueLock.acquire()
-                    #dataQueue.queue.clear()
-                    #my_Ard.clear_buffer()
-                    #if dataQueue.empty():
-                        #print("queue has been emptied for new window")
-                    #queueLock.release()
+                    time.sleep(delay)
                 ml_data = []
                 my_Ard.clear_buffer()
                 dataQueue.queue.clear()
-                print("data queue has been cleared: " + str(dataQueue.empty()))
-
 
 class listen(threading.Thread):
 
@@ -153,9 +109,42 @@ class listen(threading.Thread):
 
 
 class ML():
-    #dummy class for ML module
-    def give(self, data):
-        return "cowboy"
+    def processData(self, ml_data):
+        for arr in ml_data:
+            for i in range(len(arr)):
+                if i < 3:
+                    arr[i] = normalise(arr[i], -2000, 2000)
+                elif i in range(3, 6):
+                    arr[i] = normalise(arr[i], -250000, 250000)
+                elif i in range(6, 9):
+                    arr[i] = normalise(arr[i], -2000, 2000)
+                elif i in range(9, 12):
+                    arr[i] = normalise(arr[i], -250000, 250000)
+                elif i in range(12, 15):
+                    arr[i] = normalise(arr[i], -2000, 2000)
+                elif i in range(15, 18):
+                    arr[i] = normalise(arr[i], -250000, 250000)
+        arr_data = []
+        for array in ml_data:
+            arr_raw = []
+            arr_raw += [
+                array[0], array[1], array[2], array[6], array[7], array[8], array[12], array[13], array[14],
+                array[3],
+                array[4], array[5], array[9], array[10], array[11], array[15], array[16], array[17]
+            ]
+            arr_data.append(arr_raw)
+        return arr_data
+
+    def predict_move(self, arr_data):
+        test_sample = arr_data
+        test_sample = np.array(test_sample)
+        test_sample = test_sample.reshape(1, n_steps, n_length, n_features)
+        with graph.as_default():
+                result = model.predict(test_sample, batch_size=96, verbose=0)
+        model.reset_states()
+        result_int = int(np.argmax(result[0]))
+        danceMove = labels_dict[result_int]
+        return danceMove
 
 
 class Data():
@@ -211,5 +200,7 @@ if __name__ == '__main__':
     ip_addr = sys.argv[1]
 
     port_num = sys.argv[2]
+
+    delay = float(sys.argv[3])
 
     Main_Run()

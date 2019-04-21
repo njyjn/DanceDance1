@@ -1,4 +1,7 @@
 import os
+import json
+import csv
+
 
 label = {1: 'WALKING', 2: 'WALKING_UPSTAIRS', 3: 'WALKING_DOWNSTAIRS', 4: 'SITTING', 5: 'STANDING', 6: 'LAYING',
          7: 'STAND_TO_SIT', 8: 'SIT_TO_STAND', 9: 'SIT_TO_LIE', 10: 'LIE_TO_SIT', 11: 'STAND_TO_LIE', 12: 'LIE_TO_STAND'
@@ -8,76 +11,119 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_x_train_path = os.path.join(PROJECT_DIR, 'data', 'Train')
 x_train_file = os.path.join(data_x_train_path, 'X_train.txt')
 data_raw_path = os.path.join(PROJECT_DIR, 'data', 'raw')
-label_file = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', 'labels.txt')
+label_file = os.path.join(data_raw_path, 'labels.txt')
+processed_data_path = os.path.join(PROJECT_DIR, 'data', 'processed')
 
 
-with open(label_file, 'r') as in_file:
-    stripped = (line.strip() for line in in_file)
-    lines = (line.split(",") for line in stripped if line)
-    for line in lines:
-        items = line[0].split(" ")
-        atts = []
-        for item in items:
-            att = int(item)
-            atts.append(att)
-        '''
-        Column 1: experiment number ID, 
-        Column 2: user number ID, 
-        Column 3: activity number ID 
-        Column 4: Label start point (in number of signal log samples (recorded at 50Hz))
-        Column 5: Label end point (in number of signal log samples)
-        '''
-        expnum = atts[0]
-        expnum_str = str(atts[0])
-        if len(expnum_str) is 1:
-            expnum_str = '0'+expnum_str
-        userid = atts[1]
-        userid_str = str(atts[1])
-        if len(userid_str) is 1:
-            userid_str = '0'+ userid_str
-        activity = atts[2]
-        start = atts[3]
-        end = atts[4]
-        acc_filename_to_extract = 'acc_' + 'exp' + expnum_str + '_user' + userid_str + '.txt'
-        gyro_filename_to_extract = 'gyro_' + 'exp' + expnum_str + '_user' + userid_str + '.txt'
-        print(acc_filename_to_extract)
-        print(gyro_filename_to_extract)
+def normalise(x, minx, maxx):
+    new_x = 2*(x-minx)/(maxx-minx) - 1
+    return new_x
 
-        acc_filename_to_extract_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', acc_filename_to_extract)
-        gyro_filename_to_extract_path = os.path.join(PROJECT_DIR, 'HAPT Data Set', 'RawData', gyro_filename_to_extract)
-        acc_readings = []
-        gyro_readings = []
 
-        with open(acc_filename_to_extract_path, 'r') as acc_file:
-            stripped = (line.strip() for line in acc_file)
-            lines = (line.split(",") for line in stripped if line)
-            lines = list(lines)
+for filename in os.listdir(data_raw_path):
+    if filename.endswith(".json"):
+        name = filename[:-5]
+        new_file_name = name + '.csv'
+        new_data_path = os.path.join(processed_data_path, new_file_name)
+        data = []
+        last = ''
+        print(filename)
+        with open(os.path.join(data_raw_path, filename), 'r') as data_file:
+            lines = data_file.readlines()
+            last = lines[-1]
+            print('last:')
+            print(last)
+            if last == '':
+                last = lines[-2]
+                print(last)
+        with open(os.path.join(data_raw_path, filename), 'r') as data_file:
 
-            for reading in range(start, end):
-                acc_readings.extend(lines[reading])
+            count = 0
+            for line in data_file:
+                data_line = []
+                if line != last:
+                    line = line[:-2]
+                else:
+                    line = line[:-1]
+                if count == 0:
+                    line = line[1:]
+                count = count + 1
+                print(filename)
+                print(line)
+                print('hi')
+                data_line_raw = json.loads(line)
+                data_arr = data_line_raw['01']
+                line = line[:-1]
+                items = line.split(" ")
+                print(data_arr)
+                # data_arr = [int(i) for i in items]
+                for i in range(len(data_arr)):
+                    if i < 3:
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(3, 6):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(6, 9):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(9, 12):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(12, 15):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(15, 18):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
 
-        with open(gyro_filename_to_extract_path, 'r') as gyro_file:
-            stripped = (line.strip() for line in gyro_file)
-            lines = (line.split(",") for line in stripped if line)
-            lines = list(lines)
+                data_line.extend(data_arr)
 
-            for reading in range(start, end):
-                gyro_readings.extend(lines[reading])
+                data_arr = data_line_raw['02']
+                line = line[:-1]
+                items = line.split(" ")
+                print(data_arr)
+                # data_arr = [int(i) for i in items]
+                print(len(data_arr))
+                for i in range(len(data_arr)):
+                    if i < 3:
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(3, 6):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(6, 9):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(9, 12):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(12, 15):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(15, 18):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
 
-        readings_array = []
-        for index in range(len(gyro_readings)):
-            reading_line = acc_readings[index] + ' ' + gyro_readings[index]
-            reading_att = reading_line.split(' ')
-            reading = ''
-            for read in reading_att:
-                reading = reading + ',' + read
-            reading = reading[1:]
-            readings_array.append(reading)
+                data_line.extend(data_arr)
 
-        csv_filename = label[activity].lower() + userid_str + '.csv'
-        csv_file_path = os.path.join(PROJECT_DIR, 'data', 'processed', csv_filename)
+                data_arr = data_line_raw['03']
+                line = line[:-1]
+                items = line.split(" ")
+                print(data_arr)
+                # data_arr = [int(i) for i in items]
+                print(len(data_arr))
+                for i in range(len(data_arr)):
+                    if i < 3:
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(3, 6):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(6, 9):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(9, 12):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
+                    elif i in range(12, 15):
+                        data_arr[i] = normalise(data_arr[i], -2000, 2000)
+                    elif i in range(15, 18):
+                        data_arr[i] = normalise(data_arr[i], -250000, 250000)
 
-        with open(csv_file_path, 'a') as out_file:
-            for line_to_write in readings_array:
-                out_file.write(line_to_write)
-                out_file.write('\n')
+                data_line.extend(data_arr)
+
+                print(data_line)
+                data.append(data_line)
+            print(len(data))
+            csv_file_path = os.path.join(PROJECT_DIR, 'data', 'processed', new_file_name)
+
+            with open(csv_file_path, 'a', newline='') as out_file:
+                csv_writer = csv.writer(out_file)
+                csv_writer.writerows(data)
+    else:
+        continue

@@ -1,19 +1,11 @@
 import pandas as pd
-import numpy as np
 import os
 
-labels = [
-    'walking', 'walking_upstairs', 'walking_downstairs', 'sitting', 'standing', 'laying', 'stand_to_sit', 'sit_to_stand'
-    , 'sit_to_lie', 'lie_to_sit', 'stand_to_lie', 'lie_to_stand'
-]
-
 labels_dict = {
-    'hunch': 0, 'cowboy': 1, 'crab': 2, 'chicken': 3, 'raffles': 4
+    'hunchback': 0, 'cowboy': 1, 'crab': 2, 'chicken': 3, 'raffles': 4, 'runningman': 5, 'doublepump': 6, 'snake': 7,
+    'mermaid': 8, 'jamesbond': 9, 'ultimate': 10
 }
-
-unavailable_labels = [
-    'lie_to_sit', 'stand_to_lie'
-]
+# Removed stationary
 
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -23,23 +15,26 @@ data_processed_path = os.path.join(PROJECT_DIR, 'data', 'processed')
 # To apply overlapping sliding window
 def create_windows(file_path, window_size, overlap):
     df = pd.read_csv(file_path, header=None)
+    print(file_path)
     data_readings = df.values  # change to numpy array
     data_segments = []
     label_segments = []
-    # window_size = 60, overlap at 50% = 30, 20hz, 3s, 60 windows for 3s each 0.05s,
+    # Initial window_size = 60, overlap at 50% = 30, 20hz, 3s, 60 windows for 3s each 0.05s,
+    # New window size = 16 , 0.8s each
     # shape of data_readings is (len(data_readings), 6)
     for i in range(int(len(data_readings)/overlap)-1):
-        data_segments.append(data_readings[i*overlap:((i*overlap)+(window_size)), 0:18])
-        file_name_split = file_path.split('\\')
-        file_name = file_name_split[-1]
-        label_name = file_name[:-5]
-        label_names = file_name[:-4].split("_")
-        label_name = label_names[-1]
-        label_segments.append(labels_dict[label_name])
+        if len(data_readings[i*overlap:((i*overlap)+(window_size)), 0:18]) == 16:
+            data_segments.append(data_readings[i*overlap:((i*overlap)+(window_size)), 0:18])
+            file_name_split = file_path.split('\\')
+            file_name = file_name_split[-1]
+            # label_name = file_name[:-5]
+            label_names = file_name[:-4].split("_")
+            label_name = label_names[-1]
+            label_segments.append(labels_dict[label_name])
+
     return data_segments, label_segments
 
 
-# data_for_extraction = []
 labels_for_extraction = []
 
 data1_acc_x = []
@@ -64,15 +59,7 @@ data3_gyro_z = []
 # for j in range(len(labels_dict)):
 for filename in os.listdir(data_processed_path):
     if filename.endswith(".csv"):
-        # i_str = str(i+1)
-        # if len(i_str) is 1:
-        #     i_str = '0' + i_str
-        #
-        # if i_str == '28' and labels[j] in unavailable_labels:
-        #     continue
-        # readings, label = create_windows(os.path.join(data_processed_path, (labels[j] + i_str + ".csv")), 128, 64)
-
-        readings, label = create_windows(os.path.join(data_processed_path, filename), 60, 30)
+        readings, label = create_windows(os.path.join(data_processed_path, filename), 16, 1)
 
         for k in range(len(readings)):
             acc_x_1 = []
@@ -200,32 +187,3 @@ gyro_z3_df = pd.DataFrame(data3_gyro_z)
 gyro_z3_df.to_csv(gyro_z3_file, header=None, index=None, sep=',')
 labels_df = pd.DataFrame(labels_for_extraction)
 labels_df.to_csv(labels_file, header=None, index=None)
-
-
-# accX_data = pd.read_csv(acc_x_file)
-# accY_data = pd.read_csv(acc_y_file)
-# accZ_data = pd.read_csv(acc_z_file)
-# gyroX_data = pd.read_csv(gyro_x_file)
-# gyroY_data = pd.read_csv(gyro_y_file)
-# gyroZ_data = pd.read_csv(gyro_z_file)
-#
-# Y_data = pd.read_csv(os.path.join(data_processed_path, 'labelFeatures.csv'))
-# X_data = X_data.values
-# Y_data = Y_data.values
-# trainX, testX, trainY, testY = sklearn.model_selection.train_test_split(X_data, Y_data, test_size=0.2, random_state=0)
-
-
-# features = []
-# for i in range(len(data_for_extraction)):
-#     features.append(extract_features(np.asarray(data_for_extraction[i])))
-#
-#
-# data_csv_filename = os.path.join(data_processed_path, 'dataFeatures.csv')
-# labels_csv_filename = os.path.join(data_processed_path, 'labelFeatures.csv')
-
-# features_df = pd.DataFrame(features)
-# features_df.to_csv(data_csv_filename, header=None, index=None, sep=',')
-# labels_df = pd.DataFrame(labels_for_extraction)
-# labels_df.to_csv(labels_csv_filename, header=None, index=None)
-
-
